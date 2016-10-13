@@ -29,7 +29,6 @@ import static org.camunda.bpm.engine.test.bpmn.event.conditional.AbstractConditi
 import org.camunda.bpm.engine.variable.Variables;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
-import org.junit.Ignore;
 
 /**
  *
@@ -196,7 +195,7 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     assertEquals(TASK_BEFORE_CONDITION, task.getName());
   }
 
-  @Ignore
+  @Test
   @Deployment
   public void testSetVariableInDelegate() {
     // given process with event sub process conditional start event and service task with delegate class which sets a variable
