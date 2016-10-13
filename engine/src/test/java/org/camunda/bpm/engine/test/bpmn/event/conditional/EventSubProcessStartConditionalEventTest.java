@@ -29,6 +29,7 @@ import static org.camunda.bpm.engine.test.bpmn.event.conditional.AbstractConditi
 import org.camunda.bpm.engine.variable.Variables;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
+import org.camunda.bpm.model.bpmn.Bpmn;
 
 /**
  *
@@ -195,9 +196,33 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     assertEquals(TASK_BEFORE_CONDITION, task.getName());
   }
 
+
+  protected void deployEventSubProcessWithVariableIsSetInDelegationCode(BpmnModelInstance model, boolean isInterrupting) {
+
+    final BpmnModelInstance modelInstance = modify(model)
+            .addSubProcessTo(CONDITIONAL_EVENT_PROCESS_KEY)
+            .triggerByEvent()
+            .embeddedSubProcess()
+            .startEvent()
+            .interrupting(isInterrupting)
+            .conditionalEventDefinition(CONDITIONAL_EVENT)
+            .condition(CONDITION_EXPR)
+            .conditionalEventDefinitionDone()
+            .userTask()
+            .name(TASK_AFTER_CONDITION)
+            .endEvent().done();
+    engine.manageDeployment(repositoryService.createDeployment().addModelInstance(CONDITIONAL_MODEL, modelInstance).deploy());
+  }
+
   @Test
-  @Deployment
   public void testSetVariableInDelegate() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent().userTask().name(TASK_BEFORE_CONDITION)
+                                                  .serviceTask()
+                                                    .camundaClass(SetVariableDelegate.class.getName())
+                                                  .endEvent().done();
+    deployEventSubProcessWithVariableIsSetInDelegationCode(modelInstance, true);
+
     // given process with event sub process conditional start event and service task with delegate class which sets a variable
     ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
 
@@ -205,6 +230,7 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     Task task = taskQuery.singleResult();
     assertNotNull(task);
     assertEquals(TASK_BEFORE_CONDITION, task.getName());
+    assertEquals(1, conditionEventSubscriptionQuery.list().size());
 
     //when task is completed
     taskService.complete(task.getId());
@@ -214,6 +240,38 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     task = taskQuery.singleResult();
     assertNotNull(task);
     assertEquals(TASK_AFTER_CONDITION, task.getName());
+    assertEquals(0, conditionEventSubscriptionQuery.list().size());
+  }
+
+
+  @Test
+  public void testNonInterruptingSetVariableInDelegate() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent().userTask().name(TASK_BEFORE_CONDITION)
+                                                  .serviceTask()
+                                                    .camundaClass(SetVariableDelegate.class.getName())
+                                                  .userTask()
+                                                  .endEvent().done();
+    deployEventSubProcessWithVariableIsSetInDelegationCode(modelInstance, false);
+
+    // given process with event sub process conditional start event and service task with delegate class which sets a variable
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+    assertEquals(1, conditionEventSubscriptionQuery.list().size());
+
+    //when task before service task is completed
+    taskService.complete(task.getId());
+
+    //then service task with delegated code is called and variable is set
+    //-> non interrupting conditional event is triggered
+    //execution stays at user task after condition and after service task
+    List<Task> tasks = taskQuery.list();
+    assertEquals(2, tasks.size());
+    assertEquals(1, conditionEventSubscriptionQuery.list().size());
   }
 
   @Test
