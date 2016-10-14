@@ -94,7 +94,7 @@ public class ServiceTaskDelegateExpressionActivityBehavior extends TaskActivityB
   }
 
 	@Override
-  public void execute(final ActivityExecution execution) throws Exception {
+  public void performExecution(final ActivityExecution execution) throws Exception {
 	  Callable<Void> callable = new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -112,7 +112,7 @@ public class ServiceTaskDelegateExpressionActivityBehavior extends TaskActivityB
           Context.getProcessEngineConfiguration()
             .getDelegateInterceptor()
             .handleInvocation(new JavaDelegateInvocation((JavaDelegate) delegate, execution));
-          leave(execution);
+          tryToLeave(execution);
 
         } else {
           throw LOG.resolveDelegateExpressionException(expression, ActivityBehavior.class, JavaDelegate.class);

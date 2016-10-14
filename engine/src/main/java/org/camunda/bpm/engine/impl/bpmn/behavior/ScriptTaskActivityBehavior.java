@@ -42,7 +42,8 @@ public class ScriptTaskActivityBehavior extends TaskActivityBehavior {
     this.resultVariable = resultVariable;
   }
 
-  public void execute(final ActivityExecution execution) throws Exception {
+  @Override
+  public void performExecution(final ActivityExecution execution) throws Exception {
     executeWithErrorPropagation(execution, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -52,7 +53,7 @@ public class ScriptTaskActivityBehavior extends TaskActivityBehavior {
         if (result != null && resultVariable != null) {
           execution.setVariable(resultVariable, result);
         }
-        leave(execution);
+        tryToLeave(execution);
         return null;
       }
     });

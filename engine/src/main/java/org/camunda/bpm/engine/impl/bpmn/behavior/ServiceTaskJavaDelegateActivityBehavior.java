@@ -18,7 +18,6 @@ import org.camunda.bpm.engine.delegate.ExecutionListener;
 import org.camunda.bpm.engine.delegate.JavaDelegate;
 import org.camunda.bpm.engine.impl.bpmn.delegate.JavaDelegateInvocation;
 import org.camunda.bpm.engine.impl.context.Context;
-import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.engine.impl.pvm.delegate.ActivityBehavior;
 import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
 
@@ -38,24 +37,9 @@ public class ServiceTaskJavaDelegateActivityBehavior extends TaskActivityBehavio
   }
 
   @Override
-  public void execute(ActivityExecution execution) throws Exception {
-    final String activityInstanceId = execution.getActivityInstanceId();
+  public void performExecution(ActivityExecution execution) throws Exception {
     execute((DelegateExecution) execution);
-    //if execution is not active after delegated execution the tree was expand
-    //we have to check out replacedExecution (in case of non interrupting events)
-    if (!execution.isActive()) {
-      ExecutionEntity replacedExecution = ((ExecutionEntity) execution).getReplacedBy();
-      if (replacedExecution != null) {
-        execution = replacedExecution;
-      }
-    }
-
-    //in both cases (interrupting and non interrupting events)
-    //we have to check if activity instance was changed -> if yes, leave is not ok
-    //leave was already triggered (for example for conditional events)
-    if (activityInstanceId != null && activityInstanceId.equals(execution.getActivityInstanceId())) {
-      leave(execution);
-    }
+    tryToLeave(execution);
   }
 
   public void notify(DelegateExecution execution) throws Exception {
