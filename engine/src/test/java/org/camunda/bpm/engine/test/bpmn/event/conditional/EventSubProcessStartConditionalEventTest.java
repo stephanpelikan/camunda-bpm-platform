@@ -17,6 +17,7 @@ package org.camunda.bpm.engine.test.bpmn.event.conditional;
 
 import java.util.List;
 import java.util.Map;
+import static junit.framework.Assert.assertEquals;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.task.Task;
 import org.camunda.bpm.engine.task.TaskQuery;
@@ -27,8 +28,8 @@ import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import static org.camunda.bpm.engine.test.api.runtime.migration.ModifiableBpmnModelInstance.modify;
 import static org.camunda.bpm.engine.test.bpmn.event.conditional.AbstractConditionalEventTestCase.CONDITIONAL_VAR_EVENT_UPDATE;
 import org.camunda.bpm.engine.variable.Variables;
-import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
+import static org.camunda.bpm.engine.test.bpmn.event.conditional.BoundaryConditionalEventTest.TASK_WITH_CONDITION_ID;
 import org.camunda.bpm.model.bpmn.Bpmn;
 
 /**
@@ -36,6 +37,8 @@ import org.camunda.bpm.model.bpmn.Bpmn;
  * @author Christopher Zell <christopher.zell@camunda.com>
  */
 public class EventSubProcessStartConditionalEventTest extends AbstractConditionalEventTestCase {
+
+  protected static final String TASK_AFTER_SERVICE_TASK = "afterServiceTask";
 
   @Test
   @Deployment
@@ -273,6 +276,68 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     assertEquals(2, tasks.size());
     assertEquals(1, conditionEventSubscriptionQuery.list().size());
   }
+
+  @Test
+  public void testSetVariableInInputMapping() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent().userTask().name(TASK_BEFORE_CONDITION)
+                                                  .serviceTask(TASK_WITH_CONDITION_ID)
+                                                    .camundaInputParameter(VARIABLE_NAME, "1")
+                                                    .camundaExpression(TRUE_CONDITION)
+                                                  .userTask().name(TASK_AFTER_SERVICE_TASK)
+                                                  .endEvent().done();
+    deployEventSubProcessWithVariableIsSetInDelegationCode(modelInstance, true);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then service task with input mapping is called and variable is set
+    //-> interrupting conditional event is not triggered
+    //since variable is only localy
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_AFTER_SERVICE_TASK, task.getName());
+  }
+
+  @Test
+  public void testNonInterruptingSetVariableInInputMapping() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent().userTask().name(TASK_BEFORE_CONDITION)
+                                                  .serviceTask(TASK_WITH_CONDITION_ID)
+                                                    .camundaInputParameter(VARIABLE_NAME, "1")
+                                                    .camundaExpression(TRUE_CONDITION)
+                                                  .userTask().name(TASK_AFTER_SERVICE_TASK)
+                                                  .endEvent().done();
+    deployEventSubProcessWithVariableIsSetInDelegationCode(modelInstance, false);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task before service task is completed
+    taskService.complete(task.getId());
+
+    //then service task with input mapping is called and variable is set
+    //-> non interrupting conditional event is not triggered
+    //since variable is only localy
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_AFTER_SERVICE_TASK, task.getName());
+  }
+
+  // variable name /////////////////////////////////////////////////////////////
 
   @Test
   @Deployment(resources ={ "org/camunda/bpm/engine/test/bpmn/event/conditional/EventSubProcessStartConditionalEventTest.testSubProcessVariableCondition.bpmn20.xml"})

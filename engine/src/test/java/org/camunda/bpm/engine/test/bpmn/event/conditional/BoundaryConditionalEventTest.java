@@ -31,6 +31,7 @@ import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static org.camunda.bpm.engine.test.api.runtime.migration.ModifiableBpmnModelInstance.modify;
 import org.camunda.bpm.model.bpmn.Bpmn;
+import org.junit.Ignore;
 
 /**
  *
@@ -484,6 +485,71 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
     assertEquals(2, tasks.size());
     assertEquals(1, conditionEventSubscriptionQuery.list().size());
   }
+
+
+  @Ignore
+  public void testSetVariableInInputMapping() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent().userTask().name(TASK_BEFORE_CONDITION)
+                                                  .serviceTask(TASK_WITH_CONDITION_ID)
+                                                    .camundaInputParameter(VARIABLE_NAME, "1")
+                                                    .camundaExpression(TRUE_CONDITION)
+                                                  .endEvent().done();
+    deployBoundaryEventProcessWithVariableIsSetInDelegationCode(modelInstance, true);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then service task with delegated code is called and variable is set
+    //-> conditional event is triggered and execution stays is user task after condition
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_AFTER_CONDITION, task.getName());
+    assertEquals(0, conditionEventSubscriptionQuery.list().size());
+  }
+
+
+  @Test
+  public void testNonInterruptingSetVariableInInputMapping() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent().userTask().name(TASK_BEFORE_CONDITION)
+                                                  .serviceTask(TASK_WITH_CONDITION_ID)
+                                                    .camundaInputParameter(VARIABLE_NAME, "1")
+                                                    .camundaExpression(TRUE_CONDITION)
+                                                  .userTask()
+                                                  .endEvent().done();
+    deployBoundaryEventProcessWithVariableIsSetInDelegationCode(modelInstance, false);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task before service task is completed
+    taskService.complete(task.getId());
+
+    //then service task with delegated code is called and variable is set
+    //-> non interrupting conditional event is triggered
+    //execution stays at user task after condition and after service task
+    List<Task> tasks = taskQuery.list();
+    assertEquals(2, tasks.size());
+    assertEquals(1, conditionEventSubscriptionQuery.list().size());
+  }
+
+
+
+  // variable name /////////////////////////////////////////////////////////////
 
   @Test
   public void testVariableConditionWithVariableName() {
