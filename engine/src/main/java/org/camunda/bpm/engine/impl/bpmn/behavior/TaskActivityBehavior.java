@@ -54,7 +54,7 @@ public class TaskActivityBehavior extends AbstractBpmnActivityBehavior {
   /**
    * The method which will be called after performing the execution.
    *
-   * @param execution the execution 
+   * @param execution the execution
    * @throws Exception
    */
   protected void postExecution(ActivityExecution execution) throws Exception {
