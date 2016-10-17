@@ -430,6 +430,24 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
     engine.manageDeployment(repositoryService.createDeployment().addModelInstance(CONDITIONAL_MODEL, modelInstance).deploy());
   }
 
+
+  protected void deployBoundaryEventProcessWithVariableIsSetInInputMappingOfSubprocess(BpmnModelInstance model, boolean isInterrupting) {
+    final BpmnModelInstance modelInstance = modify(model)
+            .activityBuilder(SUBPROCESS_ID)
+            .boundaryEvent()
+            .cancelActivity(isInterrupting)
+            .conditionalEventDefinition(CONDITIONAL_EVENT)
+            .condition(CONDITION_EXPR)
+            .conditionalEventDefinitionDone()
+            .userTask()
+            .name(TASK_AFTER_CONDITION)
+            .endEvent()
+            .done();
+
+    engine.manageDeployment(repositoryService.createDeployment().addModelInstance(CONDITIONAL_MODEL, modelInstance).deploy());
+  }
+
+
   @Test
   public void testSetVariableInDelegate() {
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
@@ -601,6 +619,72 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
 
     //then service task with expression is called and variable is set
     //->non interrupting conditional event is triggered
+    List<Task> tasks = taskQuery.list();
+    assertEquals(2, tasks.size());
+    assertEquals(1, conditionEventSubscriptionQuery.list().size());
+  }
+
+  @Ignore
+  public void testSetVariableInInputMappingOfSubProcess() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent().userTask().name(TASK_BEFORE_CONDITION)
+                                                  .subProcess(SUBPROCESS_ID)
+                                                    .camundaInputParameter(VARIABLE_NAME, "1")
+                                                    .embeddedSubProcess()
+                                                    .startEvent("startSubProcess")
+                                                    .userTask().name(TASK_IN_SUB_PROCESS)
+                                                    .endEvent()
+                                                  .subProcessDone()
+                                                  .endEvent()
+                                                  .done();
+    deployBoundaryEventProcessWithVariableIsSetInInputMappingOfSubprocess(modelInstance, true);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then input mapping from sub process sets variable
+    //-> interrupting conditional event is triggered
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_AFTER_CONDITION, task.getName());
+  }
+
+  @Test
+  public void testNonInterruptingSetVariableInInputMappingOfSubProcess() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent().userTask().name(TASK_BEFORE_CONDITION)
+                                                  .subProcess(SUBPROCESS_ID)
+                                                    .camundaInputParameter(VARIABLE_NAME, "1")
+                                                    .embeddedSubProcess()
+                                                    .startEvent()
+                                                    .userTask().name(TASK_IN_SUB_PROCESS)
+                                                    .endEvent()
+                                                  .subProcessDone()
+                                                  .endEvent()
+                                                  .done();
+    deployBoundaryEventProcessWithVariableIsSetInInputMappingOfSubprocess(modelInstance, false);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task before service task is completed
+    taskService.complete(task.getId());
+
+    //then input mapping from sub process sets variable
+    //-> non interrupting conditional event is triggered
     List<Task> tasks = taskQuery.list();
     assertEquals(2, tasks.size());
     assertEquals(1, conditionEventSubscriptionQuery.list().size());

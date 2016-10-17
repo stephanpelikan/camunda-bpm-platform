@@ -52,6 +52,8 @@ public abstract class AbstractConditionalEventTestCase {
   protected static final String TRUE_CONDITION = "${true}";
   protected static final String CONDITIONAL_VAR_EVENTS = "create, update";
   protected static final String CONDITIONAL_VAR_EVENT_UPDATE = "update";
+  protected static final String TASK_IN_SUB_PROCESS = "taskInSubProcess";
+  protected static final String SUBPROCESS_ID = "subprocess";
 
 
   @Rule
