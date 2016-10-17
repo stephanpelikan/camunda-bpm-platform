@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
+import org.camunda.bpm.engine.delegate.ExecutionListener;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.task.Task;
 import org.camunda.bpm.engine.task.TaskQuery;
@@ -466,7 +467,7 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     assertEquals(1, conditionEventSubscriptionQuery.list().size());
   }
 
-  @Test
+  @Ignore
   public void testSetVariableInOutputMapping() {
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
                                                   .startEvent()
@@ -527,7 +528,7 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
   }
 
 
-  @Test
+  @Ignore
   public void testSetVariableInStartListener() {
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
                                                   .startEvent()
@@ -565,6 +566,66 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
                                                     .name(TASK_BEFORE_CONDITION)
                                                   .userTask(TASK_WITH_CONDITION_ID)
                                                     .camundaExecutionListenerExpression("start", "${execution.setVariable(\"variable\", 1)}")
+                                                  .endEvent()
+                                                  .done();
+    deployEventSubProcessWithVariableIsSetInDelegationCode(modelInstance, false);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then start listener sets variable
+    //non interrupting boundary event is triggered
+    List<Task> tasks = taskQuery.list();
+    assertEquals(2, tasks.size());
+    assertEquals(1, conditionEventSubscriptionQuery.list().size());
+  }
+
+  @Ignore
+  public void testSetVariableInEndListener() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                    .camundaExecutionListenerExpression(ExecutionListener.EVENTNAME_END, "${execution.setVariable(\"variable\", 1)}")
+                                                  .userTask(TASK_WITH_CONDITION_ID)
+                                                  .endEvent()
+                                                  .done();
+    deployEventSubProcessWithVariableIsSetInDelegationCode(modelInstance, true);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then start listener sets variable
+    //conditional event is triggered
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_AFTER_CONDITION, task.getName());
+  }
+
+  @Ignore
+  public void testNonInterruptingSetVariableInEndListener() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                    .camundaExecutionListenerExpression(ExecutionListener.EVENTNAME_END, "${execution.setVariable(\"variable\", 1)}")
+                                                  .userTask(TASK_WITH_CONDITION_ID)
                                                   .endEvent()
                                                   .done();
     deployEventSubProcessWithVariableIsSetInDelegationCode(modelInstance, false);
