@@ -648,6 +648,86 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     assertEquals(1, conditionEventSubscriptionQuery.list().size());
   }
 
+  @Test
+  public void testSetVariableInCallActivity() {
+    final BpmnModelInstance delegatedInstance = Bpmn.createExecutableProcess("delegatedProcess")
+                                                     .startEvent()
+                                                     .serviceTask()
+                                                     .camundaExpression(EXPR_SET_VARIABLE)
+                                                     .endEvent()
+                                                     .done();
+
+    engine.manageDeployment(repositoryService.createDeployment().addModelInstance(CONDITIONAL_MODEL, delegatedInstance).deploy());
+
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                  .callActivity(TASK_WITH_CONDITION_ID)
+                                                    .calledElement("delegatedProcess")
+                                                  .userTask().name(TASK_AFTER_SERVICE_TASK)
+                                                  .endEvent()
+                                                  .done();
+    deployEventSubProcessWithVariableIsSetInDelegationCode(modelInstance, true);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then service task in call activity sets variable
+    //conditional event is not triggered
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_AFTER_SERVICE_TASK, task.getName());
+  }
+
+  @Test
+  public void testNonInterruptingSetVariableInCallActivity() {
+    final BpmnModelInstance delegatedInstance = Bpmn.createExecutableProcess("delegatedProcess")
+                                                     .startEvent()
+                                                     .serviceTask()
+                                                     .camundaExpression(EXPR_SET_VARIABLE)
+                                                     .endEvent()
+                                                     .done();
+
+    engine.manageDeployment(repositoryService.createDeployment().addModelInstance(CONDITIONAL_MODEL, delegatedInstance).deploy());
+
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                  .callActivity(TASK_WITH_CONDITION_ID)
+                                                    .calledElement("delegatedProcess")
+                                                  .userTask().name(TASK_AFTER_SERVICE_TASK)
+                                                  .endEvent()
+                                                  .done();
+    deployEventSubProcessWithVariableIsSetInDelegationCode(modelInstance, false);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then service task in call activity sets variable
+    //conditional event is not triggered
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_AFTER_SERVICE_TASK, task.getName());
+  }
+
   // variable name /////////////////////////////////////////////////////////////
 
   @Test

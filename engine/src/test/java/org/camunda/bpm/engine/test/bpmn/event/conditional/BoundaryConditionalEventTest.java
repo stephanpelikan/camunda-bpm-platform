@@ -432,13 +432,16 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
     engine.manageDeployment(repositoryService.createDeployment().addModelInstance(CONDITIONAL_MODEL, modelInstance).deploy());
   }
 
-
   protected void deployBoundaryEventProcess(AbstractActivityBuilder builder, boolean isInterrupting) {
+    deployBoundaryEventProcess(builder, CONDITION_EXPR, isInterrupting);
+  }
+
+  protected void deployBoundaryEventProcess(AbstractActivityBuilder builder, String conditionExpr, boolean isInterrupting) {
     final BpmnModelInstance modelInstance = builder
             .boundaryEvent()
             .cancelActivity(isInterrupting)
             .conditionalEventDefinition(CONDITIONAL_EVENT)
-            .condition(CONDITION_EXPR)
+            .condition(conditionExpr)
             .conditionalEventDefinitionDone()
             .userTask()
             .name(TASK_AFTER_CONDITION)
@@ -574,7 +577,7 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
                                                   .startEvent().userTask().name(TASK_BEFORE_CONDITION)
                                                   .serviceTask(TASK_WITH_CONDITION_ID)
-                                                    .camundaExpression("${execution.setVariable(\"variable\", 1)}")
+                                                    .camundaExpression(EXPR_SET_VARIABLE)
                                                   .userTask().name(TASK_AFTER_SERVICE_TASK)
                                                   .endEvent().done();
     deployBoundaryEventProcessWithVariableIsSetInDelegationCode(modelInstance, true);
@@ -602,7 +605,7 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
                                                   .startEvent().userTask().name(TASK_BEFORE_CONDITION)
                                                   .serviceTask(TASK_WITH_CONDITION_ID)
-                                                    .camundaExpression("${execution.setVariable(\"variable\", 1)}")
+                                                    .camundaExpression(EXPR_SET_VARIABLE)
                                                   .userTask().name(TASK_AFTER_SERVICE_TASK)
                                                   .endEvent().done();
     deployBoundaryEventProcessWithVariableIsSetInDelegationCode(modelInstance, false);
@@ -821,7 +824,7 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
                                                   .userTask(TASK_BEFORE_CONDITION_ID)
                                                     .name(TASK_BEFORE_CONDITION)
                                                   .userTask(TASK_WITH_CONDITION_ID).name(TASK_WITH_CONDITION)
-                                                    .camundaExecutionListenerExpression("start", "${execution.setVariable(\"variable\", 1)}")
+                                                    .camundaExecutionListenerExpression("start", EXPR_SET_VARIABLE)
                                                   .endEvent()
                                                   .done();
     deployBoundaryEventProcess(modify(modelInstance).activityBuilder(TASK_WITH_CONDITION_ID), true);
@@ -851,7 +854,7 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
                                                   .userTask(TASK_BEFORE_CONDITION_ID)
                                                     .name(TASK_BEFORE_CONDITION)
                                                   .userTask(TASK_WITH_CONDITION_ID).name(TASK_WITH_CONDITION)
-                                                    .camundaExecutionListenerExpression("start", "${execution.setVariable(\"variable\", 1)}")
+                                                    .camundaExecutionListenerExpression("start", EXPR_SET_VARIABLE)
                                                   .endEvent()
                                                   .done();
     deployBoundaryEventProcess(modify(modelInstance).activityBuilder(TASK_WITH_CONDITION_ID), false);
@@ -880,7 +883,7 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
                                                   .startEvent()
                                                   .userTask(TASK_BEFORE_CONDITION_ID)
                                                     .name(TASK_BEFORE_CONDITION)
-                                                    .camundaExecutionListenerExpression(ExecutionListener.EVENTNAME_END, "${execution.setVariable(\"variable\", 1)}")
+                                                    .camundaExecutionListenerExpression(ExecutionListener.EVENTNAME_END, EXPR_SET_VARIABLE)
                                                   .userTask(TASK_WITH_CONDITION_ID)
                                                   .endEvent()
                                                   .done();
@@ -910,7 +913,7 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
                                                   .startEvent()
                                                   .userTask(TASK_BEFORE_CONDITION_ID)
                                                     .name(TASK_BEFORE_CONDITION)
-                                                    .camundaExecutionListenerExpression(ExecutionListener.EVENTNAME_END, "${execution.setVariable(\"variable\", 1)}")
+                                                    .camundaExecutionListenerExpression(ExecutionListener.EVENTNAME_END, EXPR_SET_VARIABLE)
                                                   .userTask(TASK_WITH_CONDITION_ID)
                                                   .endEvent()
                                                   .done();
@@ -932,6 +935,149 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
     List<Task> tasks = taskQuery.list();
     assertEquals(2, tasks.size());
     assertEquals(1, conditionEventSubscriptionQuery.list().size());
+  }
+
+  @Test
+  public void testSetVariableInMultiInstance() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                  .userTask(TASK_WITH_CONDITION_ID)
+                                                  .multiInstance()
+                                                    .cardinality("3")
+                                                    .parallel()
+                                                  .done();
+    deployBoundaryEventProcess(modify(modelInstance).activityBuilder(TASK_WITH_CONDITION_ID), "${nrOfInstances == 3}", true);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then multi instance is created
+    //and boundary event is triggered
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_AFTER_CONDITION, task.getName());
+  }
+
+  @Test
+  public void testNonInterruptingSetVariableInMultiInstance() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                  .userTask(TASK_WITH_CONDITION_ID)
+                                                  .multiInstance()
+                                                    .cardinality("3")
+                                                    .parallel()
+                                                  .done();
+    deployBoundaryEventProcess(modify(modelInstance).activityBuilder(TASK_WITH_CONDITION_ID), "${nrOfInstances == 3}", false);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then start listener sets variable
+    //non interrupting boundary event is triggered
+    List<Task> tasks = taskQuery.list();
+    assertEquals(2, tasks.size());
+    assertEquals(1, conditionEventSubscriptionQuery.list().size());
+  }
+
+
+  @Test
+  public void testSetVariableInCallActivity() {
+    final BpmnModelInstance delegatedInstance = Bpmn.createExecutableProcess("delegatedProcess")
+                                                     .startEvent()
+                                                     .serviceTask()
+                                                     .camundaExpression(EXPR_SET_VARIABLE)
+                                                     .endEvent()
+                                                     .done();
+
+    engine.manageDeployment(repositoryService.createDeployment().addModelInstance(CONDITIONAL_MODEL, delegatedInstance).deploy());
+
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                  .callActivity(TASK_WITH_CONDITION_ID)
+                                                    .calledElement("delegatedProcess")
+                                                  .userTask().name(TASK_AFTER_SERVICE_TASK)
+                                                  .endEvent()
+                                                  .done();
+    deployBoundaryEventProcess(modify(modelInstance).activityBuilder(TASK_WITH_CONDITION_ID), true);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then service task in call activity sets variable
+    //conditional event is not triggered
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_AFTER_SERVICE_TASK, task.getName());
+  }
+
+  @Test
+  public void testNonInterruptingSetVariableInCallActivity() {
+    final BpmnModelInstance delegatedInstance = Bpmn.createExecutableProcess("delegatedProcess")
+                                                     .startEvent()
+                                                     .serviceTask()
+                                                     .camundaExpression(EXPR_SET_VARIABLE)
+                                                     .endEvent()
+                                                     .done();
+
+    engine.manageDeployment(repositoryService.createDeployment().addModelInstance(CONDITIONAL_MODEL, delegatedInstance).deploy());
+
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                  .callActivity(TASK_WITH_CONDITION_ID)
+                                                    .calledElement("delegatedProcess")
+                                                  .userTask().name(TASK_AFTER_SERVICE_TASK)
+                                                  .endEvent()
+                                                  .done();
+    deployBoundaryEventProcess(modify(modelInstance).activityBuilder(TASK_WITH_CONDITION_ID), false);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then service task in call activity sets variable
+    //conditional event is not triggered
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_AFTER_SERVICE_TASK, task.getName());
   }
 
   // variable name /////////////////////////////////////////////////////////////
