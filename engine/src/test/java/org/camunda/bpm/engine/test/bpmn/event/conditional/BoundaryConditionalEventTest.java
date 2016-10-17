@@ -33,6 +33,7 @@ import static org.camunda.bpm.engine.test.api.runtime.migration.ModifiableBpmnMo
 import static org.camunda.bpm.engine.test.bpmn.event.conditional.AbstractConditionalEventTestCase.CONDITIONAL_EVENT_PROCESS_KEY;
 import static org.camunda.bpm.engine.test.bpmn.event.conditional.EventSubProcessStartConditionalEventTest.TASK_AFTER_SERVICE_TASK;
 import org.camunda.bpm.model.bpmn.Bpmn;
+import org.camunda.bpm.model.bpmn.builder.AbstractActivityBuilder;
 import org.junit.Ignore;
 
 /**
@@ -431,9 +432,8 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
   }
 
 
-  protected void deployBoundaryEventProcessWithVariableIsSetInInputMappingOfSubprocess(BpmnModelInstance model, boolean isInterrupting) {
-    final BpmnModelInstance modelInstance = modify(model)
-            .activityBuilder(SUBPROCESS_ID)
+  protected void deployBoundaryEventProcess(AbstractActivityBuilder builder, boolean isInterrupting) {
+    final BpmnModelInstance modelInstance = builder
             .boundaryEvent()
             .cancelActivity(isInterrupting)
             .conditionalEventDefinition(CONDITIONAL_EVENT)
@@ -637,7 +637,7 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
                                                   .subProcessDone()
                                                   .endEvent()
                                                   .done();
-    deployBoundaryEventProcessWithVariableIsSetInInputMappingOfSubprocess(modelInstance, true);
+    deployBoundaryEventProcess(modify(modelInstance).activityBuilder(SUBPROCESS_ID), true);
 
     // given
     ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
@@ -670,7 +670,7 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
                                                   .subProcessDone()
                                                   .endEvent()
                                                   .done();
-    deployBoundaryEventProcessWithVariableIsSetInInputMappingOfSubprocess(modelInstance, false);
+    deployBoundaryEventProcess(modify(modelInstance).activityBuilder(SUBPROCESS_ID), false);
 
     // given
     ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
@@ -680,7 +680,7 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
     assertNotNull(task);
     assertEquals(TASK_BEFORE_CONDITION, task.getName());
 
-    //when task before service task is completed
+    //when task before is completed
     taskService.complete(task.getId());
 
     //then input mapping from sub process sets variable
@@ -689,6 +689,130 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
     assertEquals(2, tasks.size());
     assertEquals(1, conditionEventSubscriptionQuery.list().size());
   }
+
+
+  @Test
+  public void testSetVariableInOutputMapping() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                    .camundaOutputParameter(VARIABLE_NAME, "1")
+                                                  .userTask().name("afterOutputMapping")
+                                                  .endEvent()
+                                                  .done();
+    deployBoundaryEventProcess(modify(modelInstance).activityBuilder(TASK_BEFORE_CONDITION_ID), true);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then output mapping sets variable
+    //boundary event is not triggered
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals("afterOutputMapping", task.getName());
+  }
+
+
+  @Test
+  public void testSetVariableInOutputMappingWithBoundary() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                    .camundaOutputParameter(VARIABLE_NAME, "1")
+                                                  .userTask(TASK_WITH_CONDITION_ID).name(TASK_WITH_CONDITION)
+                                                  .endEvent()
+                                                  .done();
+    deployBoundaryEventProcess(modify(modelInstance).activityBuilder(TASK_WITH_CONDITION_ID), true);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task is completed
+    taskService.complete(task.getId());
+
+    //then output mapping sets variable
+    //boundary event is not triggered
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_WITH_CONDITION, task.getName());
+  }
+
+  @Test
+  public void testNonInterruptingSetVariableInOutputMapping() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                    .camundaOutputParameter(VARIABLE_NAME, "1")
+                                                  .userTask(TASK_WITH_CONDITION_ID).name(TASK_WITH_CONDITION)
+                                                  .endEvent()
+                                                  .done();
+    deployBoundaryEventProcess(modify(modelInstance).activityBuilder(TASK_WITH_CONDITION_ID), false);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task with output mapping is completed
+    taskService.complete(task.getId());
+
+    //then output mapping sets variable
+    //boundary event is not triggered
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_WITH_CONDITION, task.getName());
+  }
+
+
+  @Test
+  public void testNonInterruptingSetVariableInOutputMappingWithBoundary() {
+    final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
+                                                  .startEvent()
+                                                  .userTask(TASK_BEFORE_CONDITION_ID)
+                                                    .name(TASK_BEFORE_CONDITION)
+                                                    .camundaOutputParameter(VARIABLE_NAME, "1")
+                                                  .userTask().name("afterOutputMapping")
+                                                  .endEvent()
+                                                  .done();
+    deployBoundaryEventProcess(modify(modelInstance).activityBuilder(TASK_BEFORE_CONDITION_ID), false);
+
+    // given
+    ProcessInstance procInst = runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    TaskQuery taskQuery = taskService.createTaskQuery().processInstanceId(procInst.getId());
+    Task task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals(TASK_BEFORE_CONDITION, task.getName());
+
+    //when task with output mapping is completed
+    taskService.complete(task.getId());
+
+    //then output mapping sets variable
+    //boundary event is not triggered
+    task = taskQuery.singleResult();
+    assertNotNull(task);
+    assertEquals("afterOutputMapping", task.getName());
+  }
+
 
   // variable name /////////////////////////////////////////////////////////////
 
