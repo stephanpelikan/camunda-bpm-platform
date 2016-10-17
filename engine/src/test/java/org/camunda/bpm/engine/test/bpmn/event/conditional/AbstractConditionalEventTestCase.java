@@ -55,6 +55,7 @@ public abstract class AbstractConditionalEventTestCase {
   protected static final String TASK_IN_SUB_PROCESS = "taskInSubProcess";
   protected static final String SUBPROCESS_ID = "subprocess";
   protected static final String EXPR_SET_VARIABLE = "${execution.setVariable(\"variable\", 1)}";
+  protected static final String FLOW_ID = "flow";
 
   @Rule
   public final ProcessEngineRule engine = new ProvidedProcessEngineRule();
