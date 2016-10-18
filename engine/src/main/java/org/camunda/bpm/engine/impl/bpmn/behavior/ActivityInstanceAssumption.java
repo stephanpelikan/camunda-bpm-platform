@@ -45,7 +45,7 @@ public class ActivityInstanceAssumption {
 
   public boolean assume(PvmExecutionImpl execution)
   {
-    return activityInstanceId.equals(execution.getActivityInstanceId());
+    return execution.getActivityId() != null && activityInstanceId.equals(execution.getActivityInstanceId());
   }
 
   public static ActivityInstanceAssumption create(PvmExecutionImpl execution)

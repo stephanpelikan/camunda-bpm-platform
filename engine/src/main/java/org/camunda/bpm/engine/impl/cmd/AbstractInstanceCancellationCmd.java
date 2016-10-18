@@ -51,7 +51,7 @@ public abstract class AbstractInstanceCancellationCmd extends AbstractProcessIns
 
     if (topmostCancellableExecution.isPreserveScope()) {
       topmostCancellableExecution.interrupt("Cancelled due to process instance modification", skipCustomListeners, skipIoMappings);
-      topmostCancellableExecution.leaveActivityInstance();
+      topmostCancellableExecution.resetActivityInstance();
       topmostCancellableExecution.setActivity(null);
     } else {
       topmostCancellableExecution.deleteCascade("Cancelled due to process instance modification", skipCustomListeners, skipIoMappings);

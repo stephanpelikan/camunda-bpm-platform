@@ -252,7 +252,7 @@ public abstract class AbstractInstantiationCmd extends AbstractProcessInstanceMo
           ExecutionEntity executionToCancel = getSingleExecutionForScope(mapping, scopeToCancel);
           executionToCancel.interrupt("Interrupting activity " + topMostActivity + " executed.", skipCustomListeners, skipIoMappings);
           executionToCancel.setActivity(null);
-          executionToCancel.leaveActivityInstance();
+          executionToCancel.resetActivityInstance();
           instantiate(executionToCancel, activitiesToInstantiate, elementToInstantiate);
           break;
         }
@@ -262,7 +262,7 @@ public abstract class AbstractInstantiationCmd extends AbstractProcessInstanceMo
           ExecutionEntity executionToCancel = getSingleExecutionForScope(mapping, scopeToCancel);
           executionToCancel.interrupt("Interrupting activity " + topMostActivity + " executed.", skipCustomListeners, skipIoMappings);
           executionToCancel.setActivity(null);
-          executionToCancel.leaveActivityInstance();
+          executionToCancel.resetActivityInstance();
           instantiate(executionToCancel, activitiesToInstantiate, elementToInstantiate);
           break;
         }

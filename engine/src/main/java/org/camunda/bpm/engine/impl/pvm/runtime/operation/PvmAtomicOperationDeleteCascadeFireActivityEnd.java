@@ -61,7 +61,7 @@ public class PvmAtomicOperationDeleteCascadeFireActivityEnd extends PvmAtomicOpe
         && (executesNonScopeActivity(execution) || isAsyncBeforeActivity(execution))
         && !CompensationBehavior.executesNonScopeCompensationHandler(execution))  {
       // case this is a scope execution and the activity is not a scope
-      execution.leaveActivityInstance();
+      execution.resetActivityInstance();
       execution.setActivity(getFlowScopeActivity(activity));
       execution.performOperation(DELETE_CASCADE_FIRE_ACTIVITY_END);
 

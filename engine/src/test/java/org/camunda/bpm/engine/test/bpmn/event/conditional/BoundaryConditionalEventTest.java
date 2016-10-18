@@ -520,6 +520,7 @@ public class BoundaryConditionalEventTest extends AbstractConditionalEventTestCa
                                                   .serviceTask(TASK_WITH_CONDITION_ID)
                                                     .camundaInputParameter(VARIABLE_NAME, "1")
                                                     .camundaExpression(TRUE_CONDITION)
+                                                  .userTask("afterCondition")
                                                   .endEvent().done();
     deployBoundaryEventProcessWithVariableIsSetInDelegationCode(modelInstance, true);
 

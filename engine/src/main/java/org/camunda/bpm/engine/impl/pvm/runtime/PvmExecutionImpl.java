@@ -22,12 +22,24 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.spi.HierarchyEventListener;
 import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.impl.ProcessEngineLogger;
+import org.camunda.bpm.engine.impl.bpmn.behavior.ActivityInstanceAssumption;
+import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl;
 import org.camunda.bpm.engine.impl.cmmn.execution.CmmnExecution;
 import org.camunda.bpm.engine.impl.cmmn.model.CmmnCaseDefinition;
+import org.camunda.bpm.engine.impl.context.Context;
 import org.camunda.bpm.engine.impl.core.instance.CoreExecution;
 import org.camunda.bpm.engine.impl.core.variable.scope.AbstractVariableScope;
+import org.camunda.bpm.engine.impl.history.HistoryLevel;
+import org.camunda.bpm.engine.impl.history.event.HistoryEvent;
+import org.camunda.bpm.engine.impl.history.event.HistoryEventTypes;
+import org.camunda.bpm.engine.impl.history.handler.HistoryEventHandler;
+import org.camunda.bpm.engine.impl.history.parser.ActivityInstanceStartListener;
+import org.camunda.bpm.engine.impl.history.parser.HistoryExecutionListener;
+import org.camunda.bpm.engine.impl.history.producer.HistoryEventProducer;
+import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.engine.impl.pvm.PvmActivity;
 import org.camunda.bpm.engine.impl.pvm.PvmException;
 import org.camunda.bpm.engine.impl.pvm.PvmExecution;
@@ -477,7 +489,7 @@ public abstract class PvmExecutionImpl extends CoreExecution implements Activity
       concurrentReplacingExecution.setActive(false);
       concurrentReplacingExecution.onConcurrentExpand(this);
       child.setParent(concurrentReplacingExecution);
-      this.leaveActivityInstance();
+      this.resetActivityInstance();
       this.setActivity(null);
     }
 
@@ -681,7 +693,7 @@ public abstract class PvmExecutionImpl extends CoreExecution implements Activity
     this.replacedBy = null;
     execution.replacedBy = this;
 
-    execution.leaveActivityInstance();
+    execution.resetActivityInstance();
   }
 
   /**
@@ -1174,6 +1186,8 @@ public abstract class PvmExecutionImpl extends CoreExecution implements Activity
 
     LOG.debugEnterActivityInstance(this, getParentActivityInstanceId());
 
+    fireHistoryStartEvent();
+
     // <LEGACY>: in general, io mappings may only exist when the activity is scope
     // however, for multi instance activities, the inner activity does not become a scope
     // due to the presence of an io mapping. In that case, it is ok to execute the io mapping
@@ -1186,10 +1200,49 @@ public abstract class PvmExecutionImpl extends CoreExecution implements Activity
 
   }
 
+  private void fireHistoryStartEvent() {
+    ProcessEngineConfigurationImpl engineConfiguration = Context.getProcessEngineConfiguration();
+    HistoryLevel historyLevel = engineConfiguration.getHistoryLevel();
+    HistoryEventProducer historyEventProducer = engineConfiguration.getHistoryEventProducer();
+
+    final HistoryEventHandler historyEventHandler = engineConfiguration.getHistoryEventHandler();
+
+    if(historyLevel.isHistoryEventProduced(HistoryEventTypes.ACTIVITY_INSTANCE_START, this)) {
+      HistoryEvent historyEvent = historyEventProducer.createActivityInstanceStartEvt((ExecutionEntity) this);
+      historyEventHandler.handleEvent(historyEvent);
+    }
+  }
+
+  private void fireHistoryEndEvent() {
+    ProcessEngineConfigurationImpl engineConfiguration = Context.getProcessEngineConfiguration();
+    HistoryLevel historyLevel = engineConfiguration.getHistoryLevel();
+    HistoryEventProducer historyEventProducer = engineConfiguration.getHistoryEventProducer();
+
+    final HistoryEventHandler historyEventHandler = engineConfiguration.getHistoryEventHandler();
+
+    if(historyLevel.isHistoryEventProduced(HistoryEventTypes.ACTIVITY_INSTANCE_END, this)) {
+      HistoryEvent historyEvent = historyEventProducer.createActivityInstanceEndEvt((ExecutionEntity) this);
+      historyEventHandler.handleEvent(historyEvent);
+    }
+  }
+
   protected abstract String generateActivityInstanceId(String activityId);
 
   @Override
+  public void resetActivityInstance() {
+
+    if(activityInstanceId != null) {
+      LOG.debugLeavesActivityInstance(this, activityInstanceId);
+    }
+    activityInstanceId = getParentActivityInstanceId();
+
+    activityInstanceState = ActivityInstanceState.DEFAULT.getStateCode();
+  }
+
   public void leaveActivityInstance() {
+
+    fireHistoryEndEvent();
+
     if(activityInstanceId != null) {
       LOG.debugLeavesActivityInstance(this, activityInstanceId);
     }

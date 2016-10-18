@@ -46,7 +46,7 @@ public interface ActivityExecution extends DelegateExecution {
   void enterActivityInstance();
 
   /** invoked to notify the execution that an activity instance is ended. */
-  void leaveActivityInstance();
+  void resetActivityInstance();
 
   void setActivityInstanceId(String id);
 

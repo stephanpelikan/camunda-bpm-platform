@@ -49,7 +49,7 @@ public abstract class PvmAtomicOperationActivityInstanceEnd extends AbstractPvmE
       // use remembered activity instance id from parent
       execution.setActivityInstanceId(parent.getActivityInstanceId());
       // make parent go one scope up.
-      parent.leaveActivityInstance();
+      parent.resetActivityInstance();
 
 
     }

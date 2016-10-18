@@ -231,10 +231,10 @@ public class HistoryParseListener implements BpmnParseListener {
 
   protected void addActivityHandlers(ActivityImpl activity) {
     if (historyLevel.isHistoryEventProduced(HistoryEventTypes.ACTIVITY_INSTANCE_START, null)) {
-      activity.addBuiltInListener(PvmEvent.EVENTNAME_START, ACTIVITY_INSTANCE_START_LISTENER, 0);
+//      activity.addBuiltInListener(PvmEvent.EVENTNAME_START, ACTIVITY_INSTANCE_START_LISTENER, 0);
     }
     if (historyLevel.isHistoryEventProduced(HistoryEventTypes.ACTIVITY_INSTANCE_END, null)) {
-      activity.addBuiltInListener(PvmEvent.EVENTNAME_END, ACTIVITY_INSTANCE_END_LISTENER);
+//      activity.addBuiltInListener(PvmEvent.EVENTNAME_END, ACTIVITY_INSTANCE_END_LISTENER);
     }
   }
 

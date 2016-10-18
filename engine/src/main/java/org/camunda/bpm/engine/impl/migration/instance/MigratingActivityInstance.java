@@ -429,7 +429,7 @@ public class MigratingActivityInstance extends MigratingScopeInstance implements
       ExecutionEntity currentExecution = resolveRepresentativeExecution();
 
       currentExecution.setActivity(null);
-      currentExecution.leaveActivityInstance();
+      currentExecution.resetActivityInstance();
       currentExecution.setActive(false);
 
       getParent().destroyAttachableExecution(currentExecution);
@@ -473,7 +473,7 @@ public class MigratingActivityInstance extends MigratingScopeInstance implements
       parent.setActivity(null);
 
       if (!parent.isConcurrent()) {
-        parent.leaveActivityInstance();
+        parent.resetActivityInstance();
       }
 
       representativeExecution = currentExecution;
@@ -527,7 +527,7 @@ public class MigratingActivityInstance extends MigratingScopeInstance implements
       currentScopeExecution.setParent(null);
 
       if (sourceScope.getActivityBehavior() instanceof CompositeActivityBehavior) {
-        parentExecution.leaveActivityInstance();
+        parentExecution.resetActivityInstance();
       }
 
       getParent().destroyAttachableExecution(parentExecution);

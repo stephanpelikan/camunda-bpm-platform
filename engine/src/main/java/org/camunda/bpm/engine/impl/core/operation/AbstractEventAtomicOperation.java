@@ -21,8 +21,8 @@ import org.camunda.bpm.engine.delegate.DelegateListener;
 import org.camunda.bpm.engine.impl.bpmn.behavior.ActivityInstanceAssumption;
 import org.camunda.bpm.engine.impl.core.instance.CoreExecution;
 import org.camunda.bpm.engine.impl.core.model.CoreModelElement;
-import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.engine.impl.pvm.PvmException;
+import org.camunda.bpm.engine.impl.pvm.runtime.PvmExecutionImpl;
 
 
 /**
@@ -34,7 +34,31 @@ public abstract class AbstractEventAtomicOperation<T extends CoreExecution> impl
     return false;
   }
 
-  public void execute(T execution) {
+  /* (non-Javadoc)
+   * @see org.camunda.bpm.engine.impl.core.operation.CoreAtomicOperation#execute(org.camunda.bpm.engine.impl.core.instance.CoreExecution)
+   */
+  @Override
+  public void execute(final T instance) {
+    if (instance instanceof PvmExecutionImpl) {
+      ActivityInstanceAssumption.doWithAssumption((PvmExecutionImpl) instance, new Callable<Void>() {
+
+        @Override
+        public Void call() throws Exception {
+          doExecute(instance);
+          return null;
+        }
+      });
+
+    }
+    else {
+      doExecute(instance);
+    }
+
+  }
+
+  public void doExecute(T execution) {
+
+
 
     CoreModelElement scope = getScope(execution);
     List<DelegateListener<? extends BaseDelegateExecution>> listeners = getListeners(scope, execution);
@@ -42,6 +66,14 @@ public abstract class AbstractEventAtomicOperation<T extends CoreExecution> impl
 
     if(listenerIndex == 0) {
       execution = eventNotificationsStarted(execution);
+
+      if (execution instanceof PvmExecutionImpl) {
+        ActivityInstanceAssumption assumption = ActivityInstanceAssumption.getCurrentAssumption();
+
+        if (!assumption.assume((PvmExecutionImpl) execution)) {
+          return;
+        }
+      }
     }
 
     if(!isSkipNotifyListeners(execution)) {
