@@ -702,14 +702,20 @@ public abstract class PvmExecutionImpl extends CoreExecution implements Activity
       throw new PvmException("cannot signal execution " + this.id + ": it has no current activity");
     }
 
-    SignallableActivityBehavior activityBehavior = (SignallableActivityBehavior) activity.getActivityBehavior();
-    try {
-      activityBehavior.signal(this, signalName, signalData);
-    } catch (RuntimeException e) {
-      throw e;
-    } catch (Exception e) {
-      throw new PvmException("couldn't process signal '"+signalName+"' on activity '"+activity.getId()+"': "+e.getMessage(), e);
-    }
+    performOperation(PvmAtomicOperation.ACTIVITY_SIGNAL);
+
+//    SignallableActivityBehavior activityBehavior = (SignallableActivityBehavior) activity.getActivityBehavior();
+//    try {
+//      activityBehavior.signal(this, signalName, signalData);
+//    } catch (RuntimeException e) {
+//      throw e;
+//    } catch (Exception e) {
+//      throw new PvmException("couldn't process signal '"+signalName+"' on activity '"+activity.getId()+"': "+e.getMessage(), e);
+//    }
+  }
+
+  public void leaveActivity() {
+    performOperation(PvmAtomicOperation.ACTIVITY_LEAVE);
   }
 
   public void take() {
@@ -1776,4 +1782,5 @@ public abstract class PvmExecutionImpl extends CoreExecution implements Activity
       }
     }
   }
+
 }

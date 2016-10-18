@@ -1901,4 +1901,5 @@ public class ExecutionEntity extends PvmExecutionImpl implements Execution, Proc
   public ProcessEngineServices getProcessEngineServices() {
     return Context.getProcessEngineConfiguration().getProcessEngine();
   }
+
 }

@@ -14,11 +14,14 @@
 package org.camunda.bpm.engine.impl.core.operation;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import org.camunda.bpm.engine.delegate.BaseDelegateExecution;
 import org.camunda.bpm.engine.delegate.DelegateListener;
+import org.camunda.bpm.engine.impl.bpmn.behavior.ActivityInstanceAssumption;
 import org.camunda.bpm.engine.impl.core.instance.CoreExecution;
 import org.camunda.bpm.engine.impl.core.model.CoreModelElement;
+import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.engine.impl.pvm.PvmException;
 
 
@@ -49,6 +52,7 @@ public abstract class AbstractEventAtomicOperation<T extends CoreExecution> impl
         DelegateListener<? extends BaseDelegateExecution> listener = listeners.get(listenerIndex);
         try {
           execution.setListenerIndex(listenerIndex+1);
+
           execution.invokeListener(listener);
         } catch (RuntimeException e) {
           throw e;

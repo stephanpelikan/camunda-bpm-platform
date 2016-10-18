@@ -32,16 +32,6 @@ public class TaskActivityBehavior extends AbstractBpmnActivityBehavior {
   protected String activityInstanceId;
 
   /**
-   * The method which will be called before the execution is performed.
-   *
-   * @param execution the execution which is used during execution
-   * @throws Exception
-   */
-  protected void preExecution(ActivityExecution execution) throws Exception {
-    activityInstanceId = execution.getActivityInstanceId();
-  }
-
-  /**
    * The method which should be overridden by the sub classes to perform an execution.
    *
    * @param execution the execution which is used during performing the execution
@@ -51,20 +41,9 @@ public class TaskActivityBehavior extends AbstractBpmnActivityBehavior {
     leave(execution);
   }
 
-  /**
-   * The method which will be called after performing the execution.
-   *
-   * @param execution the execution
-   * @throws Exception
-   */
-  protected void postExecution(ActivityExecution execution) throws Exception {
-  }
-
   @Override
   public void execute(ActivityExecution execution) throws Exception {
-    preExecution(execution);
     performExecution(execution);
-    postExecution(execution);
   }
 
   /**
@@ -76,21 +55,23 @@ public class TaskActivityBehavior extends AbstractBpmnActivityBehavior {
    * @param execution the execution which should be left
    */
   protected void tryToLeave(ActivityExecution execution) {
-    //if execution is not active after delegated execution the tree was expand
-    //we have to check out replacedExecution (in case of non interrupting events)
-    if (!execution.isActive()) {
-      ExecutionEntity replacedExecution = ((ExecutionEntity) execution).getReplacedBy();
-      if (replacedExecution != null) {
-        execution = replacedExecution;
-      }
-    }
+//    //if execution is not active after delegated execution the tree was expand
+//    //we have to check out replacedExecution (in case of non interrupting events)
+//    if (!execution.isActive()) {
+//      ExecutionEntity replacedExecution = ((ExecutionEntity) execution).getReplacedBy();
+//      if (replacedExecution != null) {
+//        execution = replacedExecution;
+//      }
+//    }
+//
+//    //in both cases (interrupting and non interrupting events)
+//    //we have to check if activity instance was changed -> if yes, leave is not ok
+//    //leave was already triggered (for example for conditional events)
+//    if (activityInstanceId != null && activityInstanceId.equals(execution.getActivityInstanceId())) {
+//      super.leave(execution);
+//    }
 
-    //in both cases (interrupting and non interrupting events)
-    //we have to check if activity instance was changed -> if yes, leave is not ok
-    //leave was already triggered (for example for conditional events)
-    if (activityInstanceId != null && activityInstanceId.equals(execution.getActivityInstanceId())) {
-      super.leave(execution);
-    }
+    leave(execution);
   }
 
 

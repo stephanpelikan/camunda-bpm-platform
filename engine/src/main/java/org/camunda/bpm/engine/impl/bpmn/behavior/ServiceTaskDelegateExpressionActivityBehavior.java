@@ -112,7 +112,7 @@ public class ServiceTaskDelegateExpressionActivityBehavior extends TaskActivityB
           Context.getProcessEngineConfiguration()
             .getDelegateInterceptor()
             .handleInvocation(new JavaDelegateInvocation((JavaDelegate) delegate, execution));
-          tryToLeave(execution);
+          execution.leaveActivity();
 
         } else {
           throw LOG.resolveDelegateExpressionException(expression, ActivityBehavior.class, JavaDelegate.class);

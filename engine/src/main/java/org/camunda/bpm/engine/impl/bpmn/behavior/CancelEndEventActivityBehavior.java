@@ -50,7 +50,7 @@ public class CancelEndEventActivityBehavior extends AbstractBpmnActivityBehavior
 
   }
 
-  protected void leave(ActivityExecution execution) {
+  public void leave(ActivityExecution execution) {
     // continue via the appropriate cancel boundary event
     ScopeImpl eventScope = (ScopeImpl) cancelBoundaryEvent.getEventScope();
 

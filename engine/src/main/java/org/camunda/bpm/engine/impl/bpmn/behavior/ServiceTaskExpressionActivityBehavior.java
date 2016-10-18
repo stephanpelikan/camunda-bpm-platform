@@ -48,7 +48,7 @@ public class ServiceTaskExpressionActivityBehavior extends TaskActivityBehavior 
         if (resultVariable != null) {
           execution.setVariable(resultVariable, value);
         }
-        tryToLeave(execution);
+        execution.leaveActivity();
         return null;
       }
     });

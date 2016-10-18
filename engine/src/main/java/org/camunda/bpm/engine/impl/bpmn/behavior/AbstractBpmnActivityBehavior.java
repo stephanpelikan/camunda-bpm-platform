@@ -59,7 +59,8 @@ public class AbstractBpmnActivityBehavior extends FlowNodeActivityBehavior {
    * called.
    */
   @Override
-  protected void leave(ActivityExecution execution) {
+  public void leave(ActivityExecution execution) {
+
     PvmActivity currentActivity = execution.getActivity();
     ActivityImpl compensationHandler = ((ActivityImpl) currentActivity).findCompensationHandler();
 

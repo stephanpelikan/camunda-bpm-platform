@@ -19,14 +19,14 @@ import java.util.concurrent.Callable;
 import org.camunda.bpm.engine.impl.bpmn.behavior.ActivityInstanceAssumption;
 import org.camunda.bpm.engine.impl.pvm.PvmException;
 import org.camunda.bpm.engine.impl.pvm.PvmLogger;
-import org.camunda.bpm.engine.impl.pvm.delegate.ActivityBehavior;
+import org.camunda.bpm.engine.impl.pvm.delegate.SignallableActivityBehavior;
 import org.camunda.bpm.engine.impl.pvm.process.ActivityImpl;
 import org.camunda.bpm.engine.impl.pvm.runtime.PvmExecutionImpl;
 
 /**
  * @author Tom Baeyens
  */
-public class PvmAtomicOperationActivityExecute implements PvmAtomicOperation {
+public class PvmAtomicOperationActivitySignal implements PvmAtomicOperation {
 
   private final static PvmLogger LOG = PvmLogger.PVM_LOGGER;
 
@@ -35,34 +35,36 @@ public class PvmAtomicOperationActivityExecute implements PvmAtomicOperation {
   }
 
   public void execute(final PvmExecutionImpl execution) {
-    final ActivityBehavior activityBehavior = getActivityBehavior(execution);
+    final SignallableActivityBehavior activityBehavior = (SignallableActivityBehavior) getActivityBehavior(execution);
 
-    final ActivityImpl activity = execution.getActivity();
-    LOG.debugExecutesActivity(execution, activity, activityBehavior.getClass().getName());
+    // TODO: instanceofs
 
     ActivityInstanceAssumption.doWithAssumption(execution,
         new Callable<Void>() {
 
           @Override
           public Void call() throws Exception {
+            ActivityImpl activity = execution.getActivity();
+//          LOG.debugExecutesActivity(execution, activity, activityBehavior.getClass().getName());
+
             try {
-              activityBehavior.execute(execution);
+              activityBehavior.signal(execution, null, null);
             } catch (RuntimeException e) {
               throw e;
             } catch (Exception e) {
-              throw new PvmException("couldn't execute activity <"+activity.getProperty("type")+" id=\""+activity.getId()+"\" ...>: "+e.getMessage(), e);
+              throw new PvmException("couldn't signal activity <"+activity.getProperty("type")+" id=\""+activity.getId()+"\" ...>: "+e.getMessage(), e);
             }
             return null;
           }
 
       }
-        );
+    );
 
 
   }
 
   public String getCanonicalName() {
-    return "activity-execute";
+    return "activity-signal";
   }
 
   public boolean isAsyncCapable() {

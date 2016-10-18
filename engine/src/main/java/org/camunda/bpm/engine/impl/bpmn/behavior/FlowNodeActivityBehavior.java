@@ -42,7 +42,7 @@ public abstract class FlowNodeActivityBehavior implements SignallableActivityBeh
    * Default way of leaving a BPMN 2.0 activity: evaluate the conditions on the
    * outgoing sequence flow and take those that evaluate to true.
    */
-  protected void leave(ActivityExecution execution) {
+  public void leave(ActivityExecution execution) {
     bpmnActivityBehavior.performDefaultOutgoingBehavior(execution);
   }
 

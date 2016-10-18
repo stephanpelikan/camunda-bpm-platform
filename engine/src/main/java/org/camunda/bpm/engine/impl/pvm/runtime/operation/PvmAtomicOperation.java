@@ -38,6 +38,8 @@ public interface PvmAtomicOperation extends CoreAtomicOperation<PvmExecutionImpl
   PvmAtomicOperation ACTIVITY_INIT_STACK = new PvmAtomicOperationActivityInitStack(ACTIVITY_INIT_STACK_NOTIFY_LISTENER_START);
   PvmAtomicOperation ACTIVITY_INIT_STACK_AND_RETURN = new PvmAtomicOperationActivityInitStack(ACTIVITY_INIT_STACK_NOTIFY_LISTENER_RETURN);
   PvmAtomicOperation ACTIVITY_EXECUTE = new PvmAtomicOperationActivityExecute();
+  PvmAtomicOperation ACTIVITY_SIGNAL = new PvmAtomicOperationActivitySignal();
+  PvmAtomicOperation ACTIVITY_LEAVE = new PvmAtomicOperationActivityLeave();
   PvmAtomicOperation ACTIVITY_NOTIFY_LISTENER_END = new PvmAtomicOperationActivityNotifyListenerEnd();
   PvmAtomicOperation ACTIVITY_END = new PvmAtomicOperationActivityEnd();
   PvmAtomicOperation FIRE_ACTIVITY_END = new PvmAtomicOperationFireActivityEnd();

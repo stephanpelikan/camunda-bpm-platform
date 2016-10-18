@@ -14,9 +14,9 @@ package org.camunda.bpm.engine.impl.pvm.runtime.operation;
 
 import static org.camunda.bpm.engine.impl.util.ActivityBehaviorUtil.getActivityBehavior;
 
-import java.util.concurrent.Callable;
-
 import org.camunda.bpm.engine.impl.bpmn.behavior.ActivityInstanceAssumption;
+import org.camunda.bpm.engine.impl.bpmn.behavior.FlowNodeActivityBehavior;
+import org.camunda.bpm.engine.impl.pvm.PvmActivity;
 import org.camunda.bpm.engine.impl.pvm.PvmException;
 import org.camunda.bpm.engine.impl.pvm.PvmLogger;
 import org.camunda.bpm.engine.impl.pvm.delegate.ActivityBehavior;
@@ -26,7 +26,7 @@ import org.camunda.bpm.engine.impl.pvm.runtime.PvmExecutionImpl;
 /**
  * @author Tom Baeyens
  */
-public class PvmAtomicOperationActivityExecute implements PvmAtomicOperation {
+public class PvmAtomicOperationActivityLeave implements PvmAtomicOperation {
 
   private final static PvmLogger LOG = PvmLogger.PVM_LOGGER;
 
@@ -34,35 +34,29 @@ public class PvmAtomicOperationActivityExecute implements PvmAtomicOperation {
     return false;
   }
 
-  public void execute(final PvmExecutionImpl execution) {
-    final ActivityBehavior activityBehavior = getActivityBehavior(execution);
+  public void execute(PvmExecutionImpl execution) {
+    // TODO: replace behavior#leave everywhere with execution#leaveActivity, such that this operation is used
 
-    final ActivityImpl activity = execution.getActivity();
-    LOG.debugExecutesActivity(execution, activity, activityBehavior.getClass().getName());
+    FlowNodeActivityBehavior activityBehavior = (FlowNodeActivityBehavior) getActivityBehavior(execution);
 
-    ActivityInstanceAssumption.doWithAssumption(execution,
-        new Callable<Void>() {
+    ActivityInstanceAssumption assumption = ActivityInstanceAssumption.getCurrentAssumption();
 
-          @Override
-          public Void call() throws Exception {
-            try {
-              activityBehavior.execute(execution);
-            } catch (RuntimeException e) {
-              throw e;
-            } catch (Exception e) {
-              throw new PvmException("couldn't execute activity <"+activity.getProperty("type")+" id=\""+activity.getId()+"\" ...>: "+e.getMessage(), e);
-            }
-            return null;
-          }
-
+    if (assumption.assume(execution)) {
+      try {
+        activityBehavior.leave(execution);
+      } catch (RuntimeException e) {
+        throw e;
+      } catch (Exception e) {
+        throw new PvmException("couldn't leave activity", e);
       }
-        );
+    }
 
+    // TODO: instanceofs
 
   }
 
   public String getCanonicalName() {
-    return "activity-execute";
+    return "activity-leave";
   }
 
   public boolean isAsyncCapable() {

@@ -53,7 +53,7 @@ public class ScriptTaskActivityBehavior extends TaskActivityBehavior {
         if (result != null && resultVariable != null) {
           execution.setVariable(resultVariable, result);
         }
-        tryToLeave(execution);
+        execution.leaveActivity();
         return null;
       }
     });

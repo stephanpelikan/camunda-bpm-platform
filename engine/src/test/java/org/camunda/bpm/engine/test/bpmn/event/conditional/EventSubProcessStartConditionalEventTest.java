@@ -403,7 +403,7 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     assertEquals(1, conditionEventSubscriptionQuery.list().size());
   }
 
-  @Ignore
+  @Test
   public void testSetVariableInInputMappingOfSubProcess() {
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
                                                   .startEvent().userTask().name(TASK_BEFORE_CONDITION)
@@ -469,7 +469,7 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     assertEquals(1, conditionEventSubscriptionQuery.list().size());
   }
 
-  @Ignore
+  @Test
   public void testSetVariableInOutputMapping() {
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
                                                   .startEvent()
@@ -613,7 +613,7 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
   }
 
 
-  @Ignore
+  @Test
   public void testSetVariableInStartListener() {
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
                                                   .startEvent()
@@ -673,7 +673,7 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     assertEquals(1, conditionEventSubscriptionQuery.list().size());
   }
 
-  @Ignore
+  @Test
   public void testSetVariableInTakeListener() {
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
                                                   .startEvent()
@@ -707,7 +707,7 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     assertEquals(TASK_AFTER_CONDITION, task.getName());
   }
 
-  @Ignore
+  @Test
   public void testNonInterruptingSetVariableInTakeListener() {
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
                                                   .startEvent()
@@ -741,7 +741,7 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     assertEquals(1, conditionEventSubscriptionQuery.list().size());
   }
 
-  @Ignore
+  @Test
   public void testSetVariableInEndListener() {
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
                                                   .startEvent()
@@ -771,7 +771,7 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     assertEquals(TASK_AFTER_CONDITION, task.getName());
   }
 
-  @Ignore
+  @Test
   public void testNonInterruptingSetVariableInEndListener() {
     final BpmnModelInstance modelInstance = Bpmn.createExecutableProcess(CONDITIONAL_EVENT_PROCESS_KEY)
                                                   .startEvent()
