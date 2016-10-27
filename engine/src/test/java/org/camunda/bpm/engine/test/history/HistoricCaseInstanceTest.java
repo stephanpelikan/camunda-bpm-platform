@@ -13,32 +13,28 @@
 
 package org.camunda.bpm.engine.test.history;
 
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasProperty;
-import static org.junit.Assert.assertThat;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.camunda.bpm.engine.ProcessEngineConfiguration;
 import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.exception.NotValidException;
 import org.camunda.bpm.engine.exception.NullValueException;
+import org.camunda.bpm.engine.history.HistoricCaseActivityInstance;
 import org.camunda.bpm.engine.history.HistoricCaseInstance;
 import org.camunda.bpm.engine.history.HistoricCaseInstanceQuery;
 import org.camunda.bpm.engine.impl.calendar.DateTimeUtil;
 import org.camunda.bpm.engine.impl.persistence.entity.HistoricCaseInstanceEntity;
 import org.camunda.bpm.engine.impl.test.CmmnProcessEngineTestCase;
 import org.camunda.bpm.engine.impl.util.ClockUtil;
+import org.camunda.bpm.engine.runtime.CaseExecution;
 import org.camunda.bpm.engine.runtime.CaseInstance;
+import org.camunda.bpm.engine.runtime.VariableInstanceQuery;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.RequiredHistoryLevel;
 import org.camunda.bpm.engine.variable.Variables;
+
+import java.util.*;
+
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
 
 /**
  * @author Sebastian Menski
@@ -103,6 +99,152 @@ public class HistoricCaseInstanceTest extends CmmnProcessEngineTestCase {
     assertTrue(historicCaseInstance.isClosed());
     assertCount(1, historicQuery().closed());
     assertCount(0, historicQuery().notClosed());
+  }
+
+  @Deployment(resources={"org/camunda/bpm/engine/test/api/cmmn/oneStageAndOneTaskCaseWithManualActivation.cmmn"})
+  public void testWhenStageCaseExecutionIsCompletedTheHistoricActivityInstanceIsMarkedTerminated() {
+
+    // given
+    createCaseInstance();
+
+    String stageExecutionId = queryCaseExecutionByActivityId("PI_Stage_1").getId();
+    manualStart(stageExecutionId);
+    String activeStageTaskExecutionId = queryCaseExecutionByActivityId("PI_HumanTask_Stage_2").getId();
+    complete(activeStageTaskExecutionId);
+    CaseExecution enabledStageTaskExecutionId = queryCaseExecutionByActivityId("PI_HumanTask_Stage_1");
+    assertTrue(enabledStageTaskExecutionId.isEnabled());
+
+    // when
+    complete(stageExecutionId);
+
+    // then the remaining stage task that was enabled is set to terminated in history
+    HistoricCaseActivityInstance manualActivationTask =
+        historyService.createHistoricCaseActivityInstanceQuery().caseActivityId("PI_HumanTask_Stage_1").singleResult();
+    HistoricCaseActivityInstance completedTask =
+        historyService.createHistoricCaseActivityInstanceQuery().caseActivityId("PI_HumanTask_Stage_2").singleResult();
+
+    assertTrue(manualActivationTask.isTerminated());
+    assertTrue(completedTask.isCompleted());
+  }
+
+  @Deployment(resources = {"org/camunda/bpm/engine/test/api/cmmn/oneStageAndOneTaskCaseWithManualActivation.cmmn"})
+  public void testWhenPlanModelCaseExecutionIsCompletedTheHistoricActivityInstancesAreMarkedTerminated() {
+
+    // given
+    createCaseInstance();
+
+    CaseExecution humanTask = queryCaseExecutionByActivityId("PI_HumanTask_3");
+    assertTrue(humanTask.isEnabled());
+    CaseExecution stage = queryCaseExecutionByActivityId("PI_Stage_1");
+    assertTrue(stage.isEnabled());
+
+    // when
+    CaseExecution casePlanExecution = queryCaseExecutionByActivityId("CasePlanModel_1");
+    complete(casePlanExecution.getId());
+
+    // then make sure all cases in the lower scope are marked as terminated in history
+    HistoricCaseActivityInstance stageInstance =
+        historyService.createHistoricCaseActivityInstanceQuery().caseActivityId("PI_Stage_1").singleResult();
+    HistoricCaseActivityInstance taskInstance =
+        historyService.createHistoricCaseActivityInstanceQuery().caseActivityId("PI_HumanTask_3").singleResult();
+
+    assertTrue(stageInstance.isTerminated());
+    assertTrue(taskInstance.isTerminated());
+  }
+
+  @Deployment(resources={"org/camunda/bpm/engine/test/api/cmmn/oneStageAndOneTaskCaseWithManualActivation.cmmn"})
+  public void testWhenPlanModelCaseExecutionIsCompletedDisabledHistoricActivityInstancesStayDisabled() {
+
+    // given
+    createCaseInstance();
+
+    CaseExecution humanTask = queryCaseExecutionByActivityId("PI_HumanTask_3");
+    assertTrue(humanTask.isEnabled());
+    CaseExecution stageExecution = queryCaseExecutionByActivityId("PI_Stage_1");
+    disable(stageExecution.getId());
+    stageExecution = queryCaseExecutionByActivityId("PI_Stage_1");
+    assertTrue(stageExecution.isDisabled());
+
+    // when
+    CaseExecution casePlanExecution = queryCaseExecutionByActivityId("CasePlanModel_1");
+    complete(casePlanExecution.getId());
+
+    // then make sure disabled executions stay disabled
+    HistoricCaseActivityInstance stageInstance =
+        historyService.createHistoricCaseActivityInstanceQuery().caseActivityId("PI_Stage_1").singleResult();
+    HistoricCaseActivityInstance taskInstance =
+        historyService.createHistoricCaseActivityInstanceQuery().caseActivityId("PI_HumanTask_3").singleResult();
+
+    assertTrue(stageInstance.isDisabled());
+    assertTrue(taskInstance.isTerminated());
+  }
+
+  @Deployment(resources={"org/camunda/bpm/engine/test/api/cmmn/oneMilestoneCaseWithManualActivation.cmmn"})
+  public void testWhenPlanModelCaseExecutionIsCompletedMilestoneHistoricActivityInstancesIsTerminated() {
+
+    // given
+    createCaseInstance();
+    final String milestoneId = "PI_Milestone_1";
+    CaseExecution caseMilestone = queryCaseExecutionByActivityId(milestoneId);
+    assertTrue(caseMilestone.isAvailable());
+
+    // when
+    CaseExecution casePlanExecution = queryCaseExecutionByActivityId("CasePlanModel_1");
+    complete(casePlanExecution.getId());
+
+    // then make sure that the milestone is terminated
+    HistoricCaseActivityInstance milestoneInstance =
+        historyService.createHistoricCaseActivityInstanceQuery().caseActivityId(milestoneId).singleResult();
+
+    assertTrue(milestoneInstance.isTerminated());
+  }
+
+  @Deployment(resources={"org/camunda/bpm/engine/test/api/cmmn/oneTaskCaseWithCustomListenerOnTerminationAndManualActivation.cmmn"})
+  public void testWhenPlanModelCaseExecutionIsCompletedCustomListenersAreNotExecuted() {
+
+    // given
+    String caseInstanceId = createCaseInstance().getId();
+
+    // when
+    CaseExecution casePlanExecution = queryCaseExecutionByActivityId("CasePlanModel_1");
+    complete(casePlanExecution.getId());
+
+    HistoricCaseActivityInstance taskInstance =
+        historyService.createHistoricCaseActivityInstanceQuery().caseActivityId("PI_HumanTask_1").singleResult();
+
+    assertTrue(taskInstance.isTerminated());
+
+    // then the custom listener should never have been executed and thus no variables exist
+    VariableInstanceQuery query = runtimeService
+        .createVariableInstanceQuery()
+        .caseInstanceIdIn(caseInstanceId);
+
+    assertEquals(0, query.count());
+  }
+
+  @Deployment(resources={"org/camunda/bpm/engine/test/api/cmmn/oneStageWithSentryAsEntryPointCase.cmmn"})
+  public void testWhenPlanModelCaseExecutionIsCompleted() {
+
+    // given
+    createCaseInstance();
+
+    // when
+    CaseExecution casePlanExecution = queryCaseExecutionByActivityId("PI_Stage_1");
+    complete(casePlanExecution.getId());
+
+    // then
+    HistoricCaseActivityInstance taskInstance =
+        historyService.createHistoricCaseActivityInstanceQuery().caseActivityId("PI_HumanTask_1").singleResult();
+
+    HistoricCaseActivityInstance taskInstance2 =
+        historyService.createHistoricCaseActivityInstanceQuery().caseActivityId("PI_HumanTask_2").singleResult();
+
+
+    // TODO: make sure that task2 was never in state active
+
+    assertTrue(taskInstance2.isTerminated());
+    assertTrue(taskInstance.isTerminated());
+
   }
 
   @Deployment(resources={"org/camunda/bpm/engine/test/api/cmmn/emptyStageWithManualActivationCase.cmmn"})
