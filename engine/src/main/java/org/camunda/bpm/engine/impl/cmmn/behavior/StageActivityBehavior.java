@@ -107,13 +107,8 @@ public class StageActivityBehavior extends StageOrTaskActivityBehavior implement
   protected void completing(CmmnActivityExecution execution) {
     List<? extends CmmnExecution> children = execution.getCaseExecutions();
     for (CmmnExecution child : children) {
-      // we want to see the children marked in history
-      // as terminated (except disabled/completed),
-      // but do not want to invoke custom listeners as
-      // this might lead to unexpected behavior.
-      child.setSkipCustomListeners(true);
       if (!child.isDisabled()) {
-        terminateChild(child);
+        child.parentComplete();
       } else { // make sure that also disabled children are removed
         child.remove();
       }

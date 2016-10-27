@@ -485,6 +485,8 @@ public interface CmmnActivityExecution extends DelegateCaseExecution {
    */
   void exit();
 
+  void parentComplete();
+
   /**
    * <p>Transition to {@link CaseExecutionState#TERMINATED} state.</p>
    *
