@@ -1115,4 +1115,17 @@ public class EventSubProcessStartConditionalEventTest extends AbstractConditiona
     tasksAfterVariableIsSet = taskQuery.list();
     assertEquals(3, tasksAfterVariableIsSet.size());
   }
+
+  @Test
+  @Deployment
+  public void testLoop() {
+    // given
+    runtimeService.startProcessInstanceByKey(CONDITIONAL_EVENT_PROCESS_KEY);
+
+    Task task = taskService.createTaskQuery().taskDefinitionKey("Task_1").singleResult();
+
+    // when
+
+    taskService.complete(task.getId());
+  }
 }
