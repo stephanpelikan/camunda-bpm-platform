@@ -12,16 +12,14 @@
  */
 package org.camunda.bpm.qa.performance.engine.bpmn;
 
-import org.camunda.bpm.engine.delegate.TaskListener;
-import org.camunda.bpm.engine.impl.ProcessEngineLogger;
-import org.camunda.bpm.engine.impl.db.EnginePersistenceLogger;
 import org.camunda.bpm.engine.repository.DeploymentBuilder;
 import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.camunda.bpm.qa.performance.engine.bpmn.delegate.RandomSleepDelegate;
-import org.camunda.bpm.qa.performance.engine.framework.PerfTest;
 import org.camunda.bpm.qa.performance.engine.junit.ProcessEngineJobExecutorPerformanceTestCase;
-import org.camunda.bpm.qa.performance.engine.steps.*;
+import org.camunda.bpm.qa.performance.engine.steps.CountJobsStep;
+import org.camunda.bpm.qa.performance.engine.steps.StartProcessInstanceStep;
+import org.camunda.bpm.qa.performance.engine.steps.WaitStep;
 import org.junit.Test;
 
 
@@ -44,6 +42,7 @@ public class MultiInstancePerformanceTest extends ProcessEngineJobExecutorPerfor
             .callActivity()
               .calledElement("calledProcess")
               .camundaAsyncAfter()
+              .camundaExclusive(true)
             .endEvent()
         .subProcessDone()
         .endEvent("end")

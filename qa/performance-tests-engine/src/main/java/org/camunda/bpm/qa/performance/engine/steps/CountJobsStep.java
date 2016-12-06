@@ -32,13 +32,11 @@ public class CountJobsStep implements PerfTestStepBehavior {
   public void execute(PerfTestRunContext context) {
     long failedJobs = processEngine.getHistoryService().createHistoricJobLogQuery().failureLog().count();
     long createdJobs = processEngine.getHistoryService().createHistoricJobLogQuery().creationLog().count();
-    long deletedJobs = processEngine.getHistoryService().createHistoricJobLogQuery().deletionLog().count();
     long successfulJobs = processEngine.getHistoryService().createHistoricJobLogQuery().successLog().count();
 
 
     System.out.println("Number of created jobs: " + createdJobs);
     System.out.println("Number of failed jobs: " + failedJobs);
-    System.out.println("Number of deleted jobs: " + deletedJobs);
     System.out.println("Number of successful jobs: " + successfulJobs);
   }
 
