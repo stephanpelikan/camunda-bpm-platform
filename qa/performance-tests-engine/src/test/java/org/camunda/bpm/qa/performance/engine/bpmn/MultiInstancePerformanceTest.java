@@ -28,7 +28,7 @@ import org.junit.Test;
  */
 public class MultiInstancePerformanceTest extends ProcessEngineJobExecutorPerformanceTestCase {
 
-  final protected String MI_CARDINALITY = "5000";
+  final protected String MI_CARDINALITY = "1000";
 
 
   @Test
@@ -42,7 +42,6 @@ public class MultiInstancePerformanceTest extends ProcessEngineJobExecutorPerfor
             .callActivity()
               .calledElement("calledProcess")
               .camundaAsyncAfter()
-              .camundaExclusive(true)
             .endEvent()
         .subProcessDone()
         .endEvent("end")
@@ -59,6 +58,7 @@ public class MultiInstancePerformanceTest extends ProcessEngineJobExecutorPerfor
     BpmnModelInstance subProcess = Bpmn.createExecutableProcess("calledProcess")
         .startEvent()
           .camundaAsyncBefore()
+          .camundaExclusive(false)
         .serviceTask()
           .camundaClass(RandomSleepDelegate.class.getName())
         .endEvent()

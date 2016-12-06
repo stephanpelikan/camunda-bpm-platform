@@ -69,6 +69,10 @@ public class ExecuteJobsRunnable implements Runnable {
         }
       }
 
+      jobExecutor
+        .getAcquireJobsRunnable()
+        .jobWasAdded();
+
     } finally {
       Context.removeJobExecutorContext();
     }

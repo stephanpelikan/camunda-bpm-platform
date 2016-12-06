@@ -15,7 +15,9 @@ package org.camunda.bpm.engine.impl.cmd;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.camunda.bpm.engine.impl.Page;
 import org.camunda.bpm.engine.impl.db.DbEntity;
@@ -58,19 +60,27 @@ public class AcquireJobsCmd implements Command<AcquiredJobs>, OptimisticLockingL
       .getJobManager()
       .findNextJobsToExecute(new Page(0, numJobsToAcquire));
 
+    Map<String, List<String>> exclusiveJobsByProcessInstance = new HashMap<String, List<String>>();
+
     for (JobEntity job : jobs) {
 
-      if (job != null && !acquiredJobs.contains(job.getId())) {
+      lockJob(job);
 
-        if (job.isExclusive() && job.getProcessInstanceId() != null) {
-          List<String> jobIds = lockExclusiveJobs(commandContext, job);
-          acquiredJobs.addJobIdBatch(jobIds);
-
-        } else {
-          lockJob(job);
-          acquiredJobs.addJobIdBatch(job.getId());
+      if(job.isExclusive()) {
+        List<String> list = exclusiveJobsByProcessInstance.get(job.getProcessInstanceId());
+        if (list == null) {
+          list = new ArrayList<String>();
+          exclusiveJobsByProcessInstance.put(job.getProcessInstanceId(), list);
         }
+        list.add(job.getId());
       }
+      else {
+        acquiredJobs.addJobIdBatch(job.getId());
+      }
+    }
+
+    for (List<String> jobIds : exclusiveJobsByProcessInstance.values()) {
+      acquiredJobs.addJobIdBatch(jobIds);
     }
 
     // register an OptimisticLockingListener which is notified about jobs which cannot be acquired.
@@ -78,6 +88,7 @@ public class AcquireJobsCmd implements Command<AcquiredJobs>, OptimisticLockingL
     commandContext
       .getDbEntityManager()
       .registerOptimisticLockingListener(this);
+
 
     return acquiredJobs;
   }

@@ -34,7 +34,7 @@ public class RandomSleepDelegate implements JavaDelegate {
   }
 
   protected long getSleepTimeInMilliSec() {
-    return getRandInt(50, 500);
+    return 500;
   }
 
   protected int getRandInt(int min, int max){
