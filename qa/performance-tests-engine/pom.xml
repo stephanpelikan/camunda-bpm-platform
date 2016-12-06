@@ -71,6 +71,7 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
               <skipTests>true</skipTests>
+              <redirectTestOutputToFile>true</redirectTestOutputToFile>
             </configuration>
           </plugin>
           <plugin>
@@ -126,6 +127,7 @@
                 <exclude>**/*TestCase.java</exclude>
                 <exclude>%regex[.*(${test.excludes}).*Test.*.class]</exclude>
               </excludes>
+              <redirectTestOutputToFile>true</redirectTestOutputToFile>
             </configuration>
           </plugin>
 
@@ -195,6 +197,7 @@
                 <exclude>**/*TestCase.java</exclude>
                 <exclude>%regex[.*(${test.excludes}).*Test.*.class]</exclude>
               </excludes>
+              <redirectTestOutputToFile>true</redirectTestOutputToFile>
             </configuration>
           </plugin>
           <plugin>
@@ -272,6 +275,7 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
               <skipTests>${skip.tests}</skipTests>
+              <redirectTestOutputToFile>true</redirectTestOutputToFile>
             </configuration>
           </plugin>
         </plugins>
@@ -314,6 +318,7 @@
                 <exclude>**/*TestCase.java</exclude>
                 <exclude>%regex[.*(${test.excludes}).*Test.*.class]</exclude>
               </excludes>
+              <redirectTestOutputToFile>true</redirectTestOutputToFile>
             </configuration>
           </plugin>
           <plugin>
@@ -381,6 +386,7 @@
                 <exclude>**/*TestCase.java</exclude>
                 <exclude>%regex[.*(${test.excludes}).*Test.*.class]</exclude>
               </excludes>
+              <redirectTestOutputToFile>true</redirectTestOutputToFile>
             </configuration>
           </plugin>
 
