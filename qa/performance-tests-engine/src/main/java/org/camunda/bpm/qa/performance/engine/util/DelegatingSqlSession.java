@@ -12,6 +12,7 @@
  */
 package org.camunda.bpm.qa.performance.engine.util;
 
+import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.executor.BatchResult;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ResultHandler;
@@ -65,6 +66,21 @@ public class DelegatingSqlSession implements SqlSession {
 
   public <K, V> Map<K, V> selectMap(String statement, Object parameter, String mapKey, RowBounds rowBounds) {
     return wrappedSession.selectMap(statement, parameter, mapKey, rowBounds);
+  }
+
+  @Override
+  public <T> Cursor<T> selectCursor(String statement) {
+    return wrappedSession.selectCursor(statement);
+  }
+
+  @Override
+  public <T> Cursor<T> selectCursor(String statement, Object parameter) {
+    return wrappedSession.selectCursor(statement, parameter);
+  }
+
+  @Override
+  public <T> Cursor<T> selectCursor(String statement, Object parameter, RowBounds rowBounds) {
+    return wrappedSession.selectCursor(statement, parameter, rowBounds);
   }
 
   public void select(String statement, Object parameter, ResultHandler handler) {
