@@ -43,7 +43,9 @@ import org.junit.Test;
  */
 public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
 
-  @Test @Deployment(resources = { "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" }) public void testQuery() {
+  @Test
+  @Deployment(resources = { "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" })
+  public void testQuery() {
     // given
     Map<String, Object> variables1 = new HashMap<String, Object>();
     variables1.put("intVar", 123);
@@ -80,7 +82,8 @@ public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
     }
   }
 
-  @Test public void testQueryByVariableId() {
+  @Test
+  public void testQueryByVariableId() {
     // given
     Map<String, Object> variables = new HashMap<String, Object>();
     variables.put("var1", "test");
@@ -103,7 +106,9 @@ public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
     taskService.deleteTask(task.getId(), true);
   }
 
-  @Test @Deployment(resources = { "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" }) public void testQueryByVariableName() {
+  @Test
+  @Deployment(resources = { "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" })
+  public void testQueryByVariableName() {
     // given
     Map<String, Object> variables = new HashMap<String, Object>();
     variables.put("stringVar", "test");
@@ -125,7 +130,9 @@ public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
     assertEquals("string", var.getTypeName());
   }
 
-  @Test @Deployment(resources = { "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" }) public void testQueryByVariableNames() {
+  @Test
+  @Deployment(resources = { "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" })
+  public void testQueryByVariableNames() {
     // given
     String variableValue = "a";
     Map<String, Object> variables = new HashMap<String, Object>();
@@ -155,7 +162,9 @@ public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
     assertEquals(0, runtimeService.createVariableInstanceQuery().variableName("task").variableNameIn("process", "execution").count());
   }
 
-  @Test @Deployment(resources = { "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" }) public void testQueryByVariableNameLike() {
+  @Test
+  @Deployment(resources = { "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" })
+  public void testQueryByVariableNameLike() {
     // given
     Map<String, Object> variables = new HashMap<String, Object>();
     variables.put("stringVar", "test");
@@ -177,8 +186,10 @@ public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
     assertEquals("string", var.getTypeName());
   }
 
-  @Test @Deployment(resources = {
-      "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" }) public void testQueryByVariableNameLikeWithoutAnyResult() {
+  @Test
+  @Deployment(resources = {
+      "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" })
+  public void testQueryByVariableNameLikeWithoutAnyResult() {
     // given
     Map<String, Object> variables = new HashMap<String, Object>();
     variables.put("stringVar", "test");
@@ -194,8 +205,9 @@ public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
     assertEquals(0, query.count());
   }
 
-  @Test @Deployment(resources = {
-      "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" }) public void testQueryByNameAndVariableValueEquals_String() {
+  @Test
+  @Deployment(resources = {"org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" })
+  public void testQueryByNameAndVariableValueEquals_String() {
     // given
     Map<String, Object> variables = new HashMap<String, Object>();
     variables.put("stringVar", "test");
@@ -217,8 +229,9 @@ public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
     assertEquals("string", var.getTypeName());
   }
 
-  @Test @Deployment(resources = {
-      "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" }) public void testQueryByNameAndVariableValueNotEquals_String() {
+  @Test
+  @Deployment(resources = {"org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" })
+  public void testQueryByNameAndVariableValueNotEquals_String() {
     // given
     Map<String, Object> variables1 = new HashMap<String, Object>();
     variables1.put("stringVar", "test");
@@ -244,8 +257,9 @@ public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
     assertEquals("string", var.getTypeName());
   }
 
-  @Test @Deployment(resources = {
-      "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" }) public void testQueryByNameAndVariableValueGreaterThan_String() {
+  @Test
+  @Deployment(resources = {"org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" })
+  public void testQueryByNameAndVariableValueGreaterThan_String() {
     // given
     Map<String, Object> variables1 = new HashMap<String, Object>();
     variables1.put("stringVar", "a");
@@ -282,8 +296,9 @@ public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
     }
   }
 
-  @Test @Deployment(resources = {
-      "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" }) public void testQueryByNameAndVariableValueGreaterThanOrEqual_String() {
+  @Test
+  @Deployment(resources = {"org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" })
+  public void testQueryByNameAndVariableValueGreaterThanOrEqual_String() {
     // given
     Map<String, Object> variables1 = new HashMap<String, Object>();
     variables1.put("stringVar", "a");
@@ -322,8 +337,9 @@ public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
     }
   }
 
-  @Test @Deployment(resources = {
-      "org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" }) public void testQueryByNameAndVariableValueLessThan_String() {
+  @Test
+  @Deployment(resources = {"org/camunda/bpm/engine/test/api/runtime/oneTaskProcess.bpmn20.xml" })
+  public void testQueryByNameAndVariableValueLessThan_String() {
     // given
     Map<String, Object> variables1 = new HashMap<String, Object>();
     variables1.put("stringVar", "a");

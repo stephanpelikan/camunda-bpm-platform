@@ -33,19 +33,21 @@
          
         <if test="valueCondition.textValue != null &amp;&amp; valueCondition.longValue == null &amp;&amp; valueCondition.doubleValue == null">
           and ${varPrefix}TEXT_ is not null and ${varPrefix}TEXT_
-        <choose>
-          <when test="queryVariableValue.operatorName.equals('LIKE')">LIKE</when>
-          <otherwise><include refid="org.camunda.bpm.engine.impl.persistence.entity.Commons.executionVariableOperator" /></otherwise>
-        </choose>
+          <choose>
+            <when test="queryVariableValue.operatorName.equals('LIKE')">LIKE</when>
+            <otherwise><include refid="org.camunda.bpm.engine.impl.persistence.entity.Commons.executionVariableOperator" /></otherwise>
+          </choose>
           #{valueCondition.textValue}
+          <if test="queryVariableValue.operatorName.equals('LIKE')">ESCAPE '\'</if>
         </if>
         <if test="valueCondition.textValue2 != null">
           and ${varPrefix}TEXT2_ is not null and ${varPrefix}TEXT2_
-        <choose>
-          <when test="queryVariableValue.operatorName.equals('LIKE')">LIKE</when>
-          <otherwise><include refid="org.camunda.bpm.engine.impl.persistence.entity.Commons.executionVariableOperator" /></otherwise>
-        </choose>
+          <choose>
+            <when test="queryVariableValue.operatorName.equals('LIKE')">LIKE</when>
+            <otherwise><include refid="org.camunda.bpm.engine.impl.persistence.entity.Commons.executionVariableOperator" /></otherwise>
+          </choose>
           #{valueCondition.textValue2}
+          <if test="queryVariableValue.operatorName.equals('LIKE')">ESCAPE '\'</if>
         </if>
     
         <if test="valueCondition.longValue != null">
@@ -69,11 +71,6 @@
     )
   </sql>
 
-  <sql id="variableValueConditions_mssql_or_oracle_or_db2">
-    <include refid="org.camunda.bpm.engine.impl.persistence.entity.Commons.variableValueConditions" />
-    ESCAPE '\'
-  </sql>
-  
   <sql id="executionVariableOperator">
     <choose>
       <when test="queryVariableValue.operatorName.equals('EQUALS')">=</when>
