@@ -36,6 +36,7 @@ public class SingleQueryVariableValueCondition extends AbstractQueryVariableValu
   protected Long longValue;
   protected Double doubleValue;
   protected String type;
+  protected String escapeChar = "\\";
 
   public SingleQueryVariableValueCondition(QueryVariableValue variableValue) {
     super(variableValue);
@@ -126,5 +127,11 @@ public class SingleQueryVariableValueCondition extends AbstractQueryVariableValu
     return type;
   }
 
+  public String getEscapeChar() {
+    return escapeChar;
+  }
 
+  public void setEscapeChar(String escapeChar) {
+    this.escapeChar = escapeChar;
+  }
 }
