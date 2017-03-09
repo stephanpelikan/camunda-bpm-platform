@@ -468,26 +468,12 @@ public class VariableInstanceQueryTest extends PluggableProcessEngineTestCase {
     variables2.put("stringVar", "test%456");
     runtimeService.startProcessInstanceByKey("oneTaskProcess", variables2);
 
-    Map<String, Object> variables3 = new HashMap<String, Object>();
-    variables3.put("stringVar", "test[789]");
-    runtimeService.startProcessInstanceByKey("oneTaskProcess", variables3);
-
-    Map<String, Object> variables4 = new HashMap<String, Object>();
-    variables4.put("stringVar", "test\\789");
-    runtimeService.startProcessInstanceByKey("oneTaskProcess", variables4);
-
     // when
     VariableInstanceQuery query = runtimeService.createVariableInstanceQuery().variableValueLike("stringVar", "test\\_%");
     verifyQueryResult(query, "test_123");
 
     query = runtimeService.createVariableInstanceQuery().variableValueLike("stringVar", "test\\%%");
     verifyQueryResult(query, "test%456");
-
-    query = runtimeService.createVariableInstanceQuery().variableValueLike("stringVar", "test\\[%\\]");
-    verifyQueryResult(query, "test[789]");
-
-    query = runtimeService.createVariableInstanceQuery().variableValueLike("stringVar", "test\\\\%");
-    verifyQueryResult(query, "test\\789");
 
   }
 
