@@ -471,9 +471,8 @@ public class HistoryCleanupTest {
 
     //when
     String jobId = historyService.cleanUpHistoryAsync().getId();
-    for (int i = 1; i <= 6; i++) {
-      managementService.executeJob(jobId);
-    }
+    updateEmptyRunsCount(jobId,5);
+    managementService.executeJob(jobId);
 
     //then
     JobEntity jobEntity = getJobEntity(jobId);
@@ -505,9 +504,8 @@ public class HistoryCleanupTest {
 
     //when
     String jobId = historyService.cleanUpHistoryAsync().getId();
-    for (int i = 1; i <= 11; i++) {
-      managementService.executeJob(jobId);
-    }
+    updateEmptyRunsCount(jobId,10);
+    managementService.executeJob(jobId);
 
     //then
     JobEntity jobEntity = getJobEntity(jobId);
@@ -538,9 +536,8 @@ public class HistoryCleanupTest {
 
     //when
     String jobId = historyService.cleanUpHistoryAsync().getId();
-    for (int i = 1; i <= 9; i++) {
-      managementService.executeJob(jobId);
-    }
+    updateEmptyRunsCount(jobId,10);
+    managementService.executeJob(jobId);
 
     //then
     JobEntity jobEntity = getJobEntity(jobId);
@@ -570,9 +567,8 @@ public class HistoryCleanupTest {
 
     //when
     String jobId = historyService.cleanUpHistoryAsync().getId();
-    for (int i = 1; i <= 3; i++) {
-      managementService.executeJob(jobId);
-    }
+    updateEmptyRunsCount(jobId,10);
+    managementService.executeJob(jobId);
 
     //then
     JobEntity jobEntity = getJobEntity(jobId);
@@ -769,6 +765,18 @@ public class HistoryCleanupTest {
     } catch (ProcessEngineException ex) {
       assertTrue(ex.getMessage().contains("historyCleanupBatchWindowEndTime"));
     }
+  }
+
+  private void updateEmptyRunsCount(final String jobId, final Integer countEmptyRuns) {
+    engineRule.getProcessEngineConfiguration().getCommandExecutorTxRequired().execute(new Command<Void>() {
+      public Void execute(CommandContext commandContext) {
+        JobEntity jobEntity = getJobEntity(jobId);
+        HistoryCleanupJobHandlerConfiguration configuration = getConfiguration(jobEntity);
+        configuration.setCountEmptyRuns(countEmptyRuns);
+        jobEntity.setJobHandlerConfiguration(configuration);
+        return null;
+      }
+    });
   }
 
   private Date getNextRunWithinBatchWindow(Date currentTime) {
