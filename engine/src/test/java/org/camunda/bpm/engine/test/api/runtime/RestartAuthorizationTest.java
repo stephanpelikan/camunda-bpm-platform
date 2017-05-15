@@ -29,7 +29,6 @@ import org.junit.runners.Parameterized;
 public class RestartAuthorizationTest {
 
   protected static final String TEST_REASON = "test reason";
-  protected static final String JOB_EXCEPTION_DEFINITION_XML = "org/camunda/bpm/engine/test/api/mgmt/ManagementServiceTest.testGetJobExceptionStacktrace.bpmn20.xml";
 
   protected ProcessEngineRule engineRule = new ProvidedProcessEngineRule();
   protected AuthorizationTestRule authRule = new AuthorizationTestRule(engineRule);
@@ -53,15 +52,15 @@ public class RestartAuthorizationTest {
             .withAuthorizations(
                 grant(Resources.PROCESS_DEFINITION, "processDefinition", "userId", Permissions.READ_HISTORY, Permissions.CREATE_INSTANCE)
             ).failsDueToRequired(
-                grant(Resources.PROCESS_INSTANCE, "*", "userId", Permissions.CREATE))
-            .succeeds(),
+                grant(Resources.PROCESS_INSTANCE, "*", "userId", Permissions.CREATE)
+            ),
         scenario()
             .withAuthorizations(
                 grant(Resources.PROCESS_INSTANCE, "*", "userId", Permissions.CREATE),
                 grant(Resources.PROCESS_DEFINITION, "processDefinition", "userId", Permissions.CREATE_INSTANCE)
             ).failsDueToRequired(
-                grant(Resources.PROCESS_DEFINITION, "processDefinition", "userId", Permissions.READ_HISTORY))
-            .succeeds()
+                grant(Resources.PROCESS_DEFINITION, "processDefinition", "userId", Permissions.READ_HISTORY)
+            )
     );
   }
 

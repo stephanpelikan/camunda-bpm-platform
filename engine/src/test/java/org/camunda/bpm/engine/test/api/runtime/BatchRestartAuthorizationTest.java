@@ -37,7 +37,6 @@ import org.junit.runners.Parameterized;
 public class BatchRestartAuthorizationTest {
 
   protected static final String TEST_REASON = "test reason";
-  protected static final String JOB_EXCEPTION_DEFINITION_XML = "org/camunda/bpm/engine/test/api/mgmt/ManagementServiceTest.testGetJobExceptionStacktrace.bpmn20.xml";
 
   protected ProcessEngineRule engineRule = new ProvidedProcessEngineRule();
   protected AuthorizationTestRule authRule = new AuthorizationTestRule(engineRule);
@@ -64,8 +63,8 @@ public class BatchRestartAuthorizationTest {
                 grant(Resources.PROCESS_INSTANCE, "*", "userId", Permissions.CREATE),
                 grant(Resources.PROCESS_DEFINITION, "processDefinition", "userId", Permissions.READ_HISTORY, Permissions.CREATE_INSTANCE)
             ).failsDueToRequired(
-                grant(Resources.BATCH, "batchId", "userId", Permissions.CREATE))
-            .succeeds()
+                grant(Resources.BATCH, "batchId", "userId", Permissions.CREATE)
+            )
     );
   }
 
