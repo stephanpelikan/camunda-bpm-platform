@@ -15,12 +15,9 @@ package org.camunda.bpm.engine.impl;
 import static org.camunda.bpm.engine.impl.util.EnsureUtil.ensureNotEmpty;
 import static org.camunda.bpm.engine.impl.util.EnsureUtil.ensureNotNull;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
+import org.apache.ibatis.exceptions.PersistenceException;
 import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.identity.Group;
 import org.camunda.bpm.engine.impl.context.Context;
@@ -28,7 +25,6 @@ import org.camunda.bpm.engine.impl.interceptor.CommandContext;
 import org.camunda.bpm.engine.impl.interceptor.CommandExecutor;
 import org.camunda.bpm.engine.impl.persistence.entity.SuspensionState;
 import org.camunda.bpm.engine.impl.persistence.entity.TaskEntity;
-import org.camunda.bpm.engine.impl.util.CompareUtil;
 import org.camunda.bpm.engine.impl.variable.serializer.VariableSerializers;
 import org.camunda.bpm.engine.task.DelegationState;
 import org.camunda.bpm.engine.task.Task;
@@ -43,24 +39,23 @@ import org.camunda.bpm.engine.variable.type.ValueType;
 public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements TaskQuery {
 
   private static final long serialVersionUID = 1L;
-  protected String taskId;
-  protected String name;
-  protected String nameNotEqual;
-  protected String nameLike;
-  protected String nameNotLike;
-  protected String description;
-  protected String descriptionLike;
-  protected Integer priority;
+  protected ArrayList<String> taskIds;
+  protected ArrayList<String> names;
+  protected ArrayList<String> namesNotEqual;
+  protected ArrayList<String> namesLike;
+  protected ArrayList<String> namesNotLike;
+  protected ArrayList<String> descriptions;
+  protected ArrayList<String> descriptionsLike;
+  protected ArrayList<Integer> priorities;
   protected Integer minPriority;
   protected Integer maxPriority;
-  protected String assignee;
-  protected String assigneeLike;
-  protected String involvedUser;
-  protected String owner;
-  protected Boolean unassigned;
-  protected Boolean assigned;
-  protected boolean noDelegationState = false;
-  protected DelegationState delegationState;
+  protected ArrayList<String> assignees;
+  protected ArrayList<String> assigneesLike;
+  protected ArrayList<String> involvedUsers;
+  protected ArrayList<String> owners;
+  protected ArrayList<Boolean> unassignedTasks;
+  protected ArrayList<Boolean> assignedTasks;
+  protected ArrayList<DelegationState> delegationStates;
   protected String candidateUser;
   protected String candidateGroup;
   protected List<String> candidateGroups;
@@ -69,95 +64,153 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   protected Boolean withCandidateUsers;
   protected Boolean withoutCandidateUsers;
   protected Boolean includeAssignedTasks;
-  protected String processInstanceId;
-  protected String executionId;
-  protected String[] activityInstanceIdIn;
-  protected Date createTime;
+  protected ArrayList<String> processInstanceIds;
+  protected ArrayList<String> executionIds;
+  protected ArrayList<String> activityInstanceIds;
+  protected ArrayList<Date> createTimes;
   protected Date createTimeBefore;
   protected Date createTimeAfter;
-  protected String key;
-  protected String keyLike;
-  protected String[] taskDefinitionKeys;
-  protected String processDefinitionKey;
-  protected String[] processDefinitionKeys;
-  protected String processDefinitionId;
-  protected String processDefinitionName;
-  protected String processDefinitionNameLike;
-  protected String processInstanceBusinessKey;
-  protected String[] processInstanceBusinessKeys;
-  protected String processInstanceBusinessKeyLike;
+  protected ArrayList<String> keys;
+  protected ArrayList<String> keysLike;
+  protected ArrayList<String> taskDefinitionKeys;
+  protected ArrayList<String> processDefinitionKeys;
+  protected ArrayList<String> processDefinitionKeysIn;
+  protected ArrayList<String> processDefinitionIds;
+  protected ArrayList<String> processDefinitionNames;
+  protected ArrayList<String> processDefinitionNamesLike;
+  protected ArrayList<String> processInstanceBusinessKeys;
+  protected ArrayList<String> processInstanceBusinessKeysIn;
+  protected ArrayList<String> processInstanceBusinessKeysLike;
   protected List<TaskQueryVariableValue> variables = new ArrayList<TaskQueryVariableValue>();
-  protected Date dueDate;
+  protected ArrayList<Date> dueDates;
   protected Date dueBefore;
   protected Date dueAfter;
-  protected Date followUpDate;
+  protected ArrayList<Date> followUpDates;
   protected Date followUpBefore;
   protected boolean followUpNullAccepted=false;
   protected Date followUpAfter;
   protected boolean excludeSubtasks = false;
   protected SuspensionState suspensionState;
+  protected ArrayList<SuspensionState> suspensionStates;
   protected boolean initializeFormKeys = false;
   protected boolean taskNameCaseInsensitive = false;
 
-  protected String parentTaskId;
+  protected ArrayList<String> parentTaskIds;
   protected boolean isTenantIdSet = false;
-
   protected String[] tenantIds;
+
   // case management /////////////////////////////
-  protected String caseDefinitionKey;
-  protected String caseDefinitionId;
-  protected String caseDefinitionName;
-  protected String caseDefinitionNameLike;
-  protected String caseInstanceId;
-  protected String caseInstanceBusinessKey;
-  protected String caseInstanceBusinessKeyLike;
-  protected String caseExecutionId;
+  protected ArrayList<String> caseDefinitionKeys;
+  protected ArrayList<String> caseDefinitionIds;
+  protected ArrayList<String> caseDefinitionNames;
+  protected ArrayList<String> caseDefinitionNamesLike;
+  protected ArrayList<String> caseInstanceIds;
+  protected ArrayList<String> caseInstanceBusinessKeys;
+  protected ArrayList<String> caseInstanceBusinessKeysLike;
+  protected ArrayList<String> caseExecutionIds;
+
+  // logical expression query /////////////////////////////
+  protected ArrayList<TaskQueryImpl> logicalExpressionQueryList = null;
+  protected TaskQueryImpl logicalExpressionQueryRootNode = null;
+  protected List<TaskQueryImpl> logicalExpressionQueryChildren = new ArrayList<TaskQueryImpl>();
+  protected TaskQueryImpl parentLogicalExpressionQuery = null;
+  protected logicalExpressionEnum logicalExpression = logicalExpressionEnum.and;
+  protected enum logicalExpressionEnum {and, or}
 
   public TaskQueryImpl() {
+    logicalExpressionQueryRootNode = this;
+    logicalExpressionQueryRootNode.logicalExpressionQueryList = new ArrayList<TaskQueryImpl>();
+    logicalExpressionQueryRootNode.logicalExpressionQueryList.add(this);
   }
 
   public TaskQueryImpl(CommandExecutor commandExecutor) {
     super(commandExecutor);
+
+    logicalExpressionQueryRootNode = this;
+    logicalExpressionQueryRootNode.logicalExpressionQueryList = new ArrayList<TaskQueryImpl>();
+    logicalExpressionQueryRootNode.logicalExpressionQueryList.add(this);
+  }
+
+  public TaskQueryImpl(logicalExpressionEnum logicalExpression, TaskQueryImpl parentLogicalExpressionQuery) {
+    this.logicalExpression = logicalExpression;
+    this.parentLogicalExpressionQuery = parentLogicalExpressionQuery;
+    logicalExpressionQueryRootNode = parentLogicalExpressionQuery.logicalExpressionQueryRootNode;
+    logicalExpressionQueryRootNode.logicalExpressionQueryList.add(this);
   }
 
   @Override
   public TaskQueryImpl taskId(String taskId) {
     ensureNotNull("Task id", taskId);
-    this.taskId = taskId;
+
+    if (taskIds == null) {
+      taskIds = new ArrayList<String>();
+    }
+
+    taskIds.add(taskId);
+
     return this;
   }
 
   @Override
   public TaskQueryImpl taskName(String name) {
-    this.name = name;
+    if (names == null) {
+      names = new ArrayList<String>();
+    }
+
+    names.add(name);
+
     return this;
   }
 
   @Override
   public TaskQueryImpl taskNameLike(String nameLike) {
     ensureNotNull("Task nameLike", nameLike);
-    this.nameLike = nameLike;
+
+    if (namesLike == null) {
+      namesLike = new ArrayList<String>();
+    }
+
+    namesLike.add(nameLike);
+
     return this;
   }
 
   @Override
   public TaskQueryImpl taskDescription(String description) {
     ensureNotNull("Description", description);
-    this.description = description;
+
+    if (descriptions == null) {
+      descriptions = new ArrayList<String>();
+    }
+
+    descriptions.add(description);
+
     return this;
   }
 
   @Override
   public TaskQuery taskDescriptionLike(String descriptionLike) {
     ensureNotNull("Task descriptionLike", descriptionLike);
-    this.descriptionLike = descriptionLike;
+
+    if (descriptionsLike == null) {
+      descriptionsLike = new ArrayList<String>();
+    }
+
+    descriptionsLike.add(descriptionLike);
+
     return this;
   }
 
   @Override
   public TaskQuery taskPriority(Integer priority) {
     ensureNotNull("Priority", priority);
-    this.priority = priority;
+
+    if (priorities == null) {
+      priorities = new ArrayList<Integer>();
+    }
+
+    priorities.add(priority);
+
     return this;
   }
 
@@ -178,7 +231,13 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQueryImpl taskAssignee(String assignee) {
     ensureNotNull("Assignee", assignee);
-    this.assignee = assignee;
+
+    if (assignees == null) {
+      assignees = new ArrayList<String>();
+    }
+
+    assignees.add(assignee);
+
     expressions.remove("taskAssignee");
     return this;
   }
@@ -193,7 +252,13 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery taskAssigneeLike(String assignee) {
     ensureNotNull("Assignee", assignee);
-    this.assigneeLike = assignee;
+
+    if (assigneesLike == null) {
+      assigneesLike = new ArrayList<String>();
+    }
+
+    assigneesLike.add(assignee);
+
     expressions.remove("taskAssigneeLike");
     return this;
   }
@@ -208,7 +273,13 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQueryImpl taskOwner(String owner) {
     ensureNotNull("Owner", owner);
-    this.owner = owner;
+
+    if (owners == null) {
+      owners = new ArrayList<String>();
+    }
+
+    owners.add(owner);
+
     expressions.remove("taskOwner");
     return this;
   }
@@ -229,23 +300,34 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery taskUnassigned() {
-    this.unassigned = true;
+    if (unassignedTasks == null) {
+      unassignedTasks = new ArrayList<Boolean>();
+    }
+
+    unassignedTasks.add(true);
+
     return this;
   }
 
   @Override
   public TaskQuery taskAssigned() {
-    this.assigned = true;
+    if (assignedTasks == null) {
+      assignedTasks = new ArrayList<Boolean>();
+    }
+
+    assignedTasks.add(true);
+
     return this;
   }
 
   @Override
   public TaskQuery taskDelegationState(DelegationState delegationState) {
-    if (delegationState == null) {
-      this.noDelegationState = true;
-    } else {
-      this.delegationState = delegationState;
+    if (delegationStates == null) {
+      delegationStates = new ArrayList<DelegationState>();
     }
+
+    delegationStates.add(delegationState);
+
     return this;
   }
 
@@ -253,11 +335,13 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQueryImpl taskCandidateUser(String candidateUser) {
     ensureNotNull("Candidate user", candidateUser);
 
-    if (candidateGroup != null || expressions.containsKey("taskCandidateGroup")) {
-      throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroup");
-    }
-    if (candidateGroups != null || expressions.containsKey("taskCandidateGroupIn")) {
-      throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroupIn");
+    if(logicalExpression == logicalExpressionEnum.and) {
+      if (candidateGroup != null || expressions.containsKey("taskCandidateGroup")) {
+        throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroup");
+      }
+      if (candidateGroups != null || expressions.containsKey("taskCandidateGroupIn")) {
+        throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroupIn");
+      }
     }
     this.candidateUser = candidateUser;
     expressions.remove("taskCandidateUser");
@@ -268,11 +352,13 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQuery taskCandidateUserExpression(String candidateUserExpression) {
     ensureNotNull("Candidate user expression", candidateUserExpression);
 
-    if (candidateGroup != null || expressions.containsKey("taskCandidateGroup")) {
-      throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroup");
-    }
-    if (candidateGroups != null || expressions.containsKey("taskCandidateGroupIn")) {
-      throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroupIn");
+    if(logicalExpression == logicalExpressionEnum.and) {
+      if (candidateGroup != null || expressions.containsKey("taskCandidateGroup")) {
+        throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroup");
+      }
+      if (candidateGroups != null || expressions.containsKey("taskCandidateGroupIn")) {
+        throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroupIn");
+      }
     }
 
     expressions.put("taskCandidateUser", candidateUserExpression);
@@ -282,7 +368,13 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQueryImpl taskInvolvedUser(String involvedUser) {
     ensureNotNull("Involved user", involvedUser);
-    this.involvedUser = involvedUser;
+
+    if (involvedUsers == null) {
+      involvedUsers = new ArrayList<String>();
+    }
+
+    involvedUsers.add(involvedUser);
+
     expressions.remove("taskInvolvedUser");
     return this;
   }
@@ -322,12 +414,15 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQueryImpl taskCandidateGroup(String candidateGroup) {
     ensureNotNull("Candidate group", candidateGroup);
 
-    if (candidateUser != null || expressions.containsKey("taskCandidateUser")) {
-      throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroup and candidateUser");
+    if(logicalExpression == logicalExpressionEnum.and) {
+      if (candidateUser != null || expressions.containsKey("taskCandidateUser")) {
+        throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroup and candidateUser");
+      }
+      if (candidateGroups != null || expressions.containsKey("taskCandidateGroupIn")) {
+        throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroup and candidateGroupIn");
+      }
     }
-    if (candidateGroups != null || expressions.containsKey("taskCandidateGroupIn")) {
-      throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroup and candidateGroupIn");
-    }
+
     this.candidateGroup = candidateGroup;
     expressions.remove("taskCandidateGroup");
     return this;
@@ -352,11 +447,13 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQuery taskCandidateGroupIn(List<String> candidateGroups) {
     ensureNotEmpty("Candidate group list", candidateGroups);
 
-    if (candidateUser != null || expressions.containsKey("taskCandidateUser")) {
-      throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroupIn and candidateUser");
-    }
-    if (candidateGroup != null || expressions.containsKey("taskCandidateGroup")) {
-      throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroupIn and candidateGroup");
+    if(logicalExpression == logicalExpressionEnum.and) {
+      if (candidateUser != null || expressions.containsKey("taskCandidateUser")) {
+        throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroupIn and candidateUser");
+      }
+      if (candidateGroup != null || expressions.containsKey("taskCandidateGroup")) {
+        throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroupIn and candidateGroup");
+      }
     }
 
     this.candidateGroups = candidateGroups;
@@ -398,37 +495,67 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQueryImpl processInstanceId(String processInstanceId) {
-    this.processInstanceId = processInstanceId;
+    if (processInstanceIds == null) {
+      processInstanceIds = new ArrayList<String>();
+    }
+
+    processInstanceIds.add(processInstanceId);
+
     return this;
   }
 
   @Override
   public TaskQueryImpl processInstanceBusinessKey(String processInstanceBusinessKey) {
-    this.processInstanceBusinessKey = processInstanceBusinessKey;
+    if (processInstanceBusinessKeys == null) {
+      processInstanceBusinessKeys = new ArrayList<String>();
+    }
+
+    processInstanceBusinessKeys.add(processInstanceBusinessKey);
+
     return this;
   }
 
   @Override
   public TaskQuery processInstanceBusinessKeyIn(String... processInstanceBusinessKeys) {
-    this.processInstanceBusinessKeys = processInstanceBusinessKeys;
+    if (processInstanceBusinessKeysIn == null) {
+      processInstanceBusinessKeysIn = new ArrayList<String>();
+    }
+
+    processInstanceBusinessKeysIn.addAll(Arrays.asList(processInstanceBusinessKeys));
+
     return this;
   }
 
   @Override
   public TaskQuery processInstanceBusinessKeyLike(String processInstanceBusinessKey) {
-  	this.processInstanceBusinessKeyLike = processInstanceBusinessKey;
-  	return this;
+    if (processInstanceBusinessKeysLike == null) {
+      processInstanceBusinessKeysLike = new ArrayList<String>();
+    }
+
+    processInstanceBusinessKeysLike.add(processInstanceBusinessKey);
+
+    return this;
   }
 
   @Override
   public TaskQueryImpl executionId(String executionId) {
-    this.executionId = executionId;
+    if (executionIds == null) {
+      executionIds = new ArrayList<String>();
+    }
+
+    executionIds.add(executionId);
+
     return this;
   }
 
   @Override
   public TaskQuery activityInstanceIdIn(String... activityInstanceIds) {
-    this.activityInstanceIdIn = activityInstanceIds;
+    if (activityInstanceIds == null) {
+      this.activityInstanceIds = new ArrayList<String>();
+    }
+
+    this.activityInstanceIds.addAll(Arrays.asList(activityInstanceIds));
+
     return this;
   }
 
@@ -449,7 +576,12 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQueryImpl taskCreatedOn(Date createTime) {
-    this.createTime = createTime;
+    if (createTimes == null) {
+      createTimes = new ArrayList<Date>();
+    }
+
+    createTimes.add(createTime);
+
     expressions.remove("taskCreatedOn");
     return this;
   }
@@ -488,81 +620,149 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery taskDefinitionKey(String key) {
-    this.key = key;
+    if (keys == null) {
+      keys = new ArrayList<String>();
+    }
+
+    keys.add(key);
+
     return this;
   }
 
   @Override
   public TaskQuery taskDefinitionKeyLike(String keyLike) {
-    this.keyLike = keyLike;
+    if (keysLike == null) {
+      keysLike = new ArrayList<String>();
+    }
+
+    keysLike.add(keyLike);
+
     return this;
   }
 
   @Override
   public TaskQuery taskDefinitionKeyIn(String... taskDefinitionKeys) {
-  	this.taskDefinitionKeys = taskDefinitionKeys;
-  	return this;
+    if (this.taskDefinitionKeys == null) {
+      this.taskDefinitionKeys = new ArrayList<String>();
+    }
+
+    this.taskDefinitionKeys.addAll(Arrays.asList(taskDefinitionKeys));
+
+    return this;
   }
 
   @Override
   public TaskQuery taskParentTaskId(String taskParentTaskId) {
-    this.parentTaskId = taskParentTaskId;
+    if (parentTaskIds == null) {
+      parentTaskIds = new ArrayList<String>();
+    }
+
+    parentTaskIds.add(taskParentTaskId);
+
     return this;
   }
 
   @Override
   public TaskQuery caseInstanceId(String caseInstanceId) {
     ensureNotNull("caseInstanceId", caseInstanceId);
-    this.caseInstanceId = caseInstanceId;
+
+    if (caseInstanceIds == null) {
+      caseInstanceIds = new ArrayList<String>();
+    }
+
+    caseInstanceIds.add(caseInstanceId);
+
     return this;
   }
 
   @Override
   public TaskQuery caseInstanceBusinessKey(String caseInstanceBusinessKey) {
     ensureNotNull("caseInstanceBusinessKey", caseInstanceBusinessKey);
-    this.caseInstanceBusinessKey = caseInstanceBusinessKey;
+
+    if (caseInstanceBusinessKeys == null) {
+      caseInstanceBusinessKeys = new ArrayList<String>();
+    }
+
+    caseInstanceBusinessKeys.add(caseInstanceBusinessKey);
+
     return this;
   }
 
   @Override
   public TaskQuery caseInstanceBusinessKeyLike(String caseInstanceBusinessKeyLike) {
     ensureNotNull("caseInstanceBusinessKeyLike", caseInstanceBusinessKeyLike);
-    this.caseInstanceBusinessKeyLike = caseInstanceBusinessKeyLike;
+
+    if (caseInstanceBusinessKeysLike == null) {
+      caseInstanceBusinessKeysLike = new ArrayList<String>();
+    }
+
+    caseInstanceBusinessKeysLike.add(caseInstanceBusinessKeyLike);
+
     return this;
   }
 
   @Override
   public TaskQuery caseExecutionId(String caseExecutionId) {
     ensureNotNull("caseExecutionId", caseExecutionId);
-    this.caseExecutionId = caseExecutionId;
+
+    if (caseExecutionIds == null) {
+      caseExecutionIds = new ArrayList<String>();
+    }
+
+    caseExecutionIds.add(caseExecutionId);
+
     return this;
   }
 
   @Override
   public TaskQuery caseDefinitionId(String caseDefinitionId) {
     ensureNotNull("caseDefinitionId", caseDefinitionId);
-    this.caseDefinitionId = caseDefinitionId;
+
+    if (caseDefinitionIds == null) {
+      caseDefinitionIds = new ArrayList<String>();
+    }
+
+    caseDefinitionIds.add(caseDefinitionId);
+
     return this;
   }
 
   @Override
   public TaskQuery caseDefinitionKey(String caseDefinitionKey) {
     ensureNotNull("caseDefinitionKey", caseDefinitionKey);
-    this.caseDefinitionKey = caseDefinitionKey;
+
+    if (caseDefinitionKeys == null) {
+      caseDefinitionKeys = new ArrayList<String>();
+    }
+
+    caseDefinitionKeys.add(caseDefinitionKey);
+
     return this;
   }
 
   @Override
   public TaskQuery caseDefinitionName(String caseDefinitionName) {
     ensureNotNull("caseDefinitionName", caseDefinitionName);
-    this.caseDefinitionName = caseDefinitionName;
+
+    if (caseDefinitionNames == null) {
+      caseDefinitionNames = new ArrayList<String>();
+    }
+
+    caseDefinitionNames.add(caseDefinitionName);
+
     return this;
   }
 
   @Override
   public TaskQuery caseDefinitionNameLike(String caseDefinitionNameLike) {
     ensureNotNull("caseDefinitionNameLike", caseDefinitionNameLike);
-    this.caseDefinitionNameLike = caseDefinitionNameLike;
+
+    if (caseDefinitionNamesLike == null) {
+      caseDefinitionNamesLike = new ArrayList<String>();
+    }
+
+    caseDefinitionNamesLike.add(caseDefinitionNameLike);
+
     return this;
   }
 
@@ -694,37 +894,67 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery processDefinitionKey(String processDefinitionKey) {
-    this.processDefinitionKey = processDefinitionKey;
+    if (processDefinitionKeys == null) {
+      processDefinitionKeys = new ArrayList<String>();
+    }
+
+    processDefinitionKeys.add(processDefinitionKey);
+
     return this;
   }
 
   @Override
-  public TaskQuery processDefinitionKeyIn(String... processDefinitionKeys) {
-    this.processDefinitionKeys = processDefinitionKeys;
+  public TaskQuery processDefinitionKeyIn(String... processDefinitionKeysIn) {
+    if (this.processDefinitionKeysIn == null) {
+      this.processDefinitionKeysIn = new ArrayList<String>();
+    }
+
+    this.processDefinitionKeysIn.addAll(Arrays.asList(processDefinitionKeysIn));
+
     return this;
   }
 
   @Override
   public TaskQuery processDefinitionId(String processDefinitionId) {
-    this.processDefinitionId = processDefinitionId;
+    if (processDefinitionIds == null) {
+      processDefinitionIds = new ArrayList<String>();
+    }
+
+    processDefinitionIds.add(processDefinitionId);
+
     return this;
   }
 
   @Override
   public TaskQuery processDefinitionName(String processDefinitionName) {
-    this.processDefinitionName = processDefinitionName;
+    if (processDefinitionNames == null) {
+      processDefinitionNames = new ArrayList<String>();
+    }
+
+    processDefinitionNames.add(processDefinitionName);
+
     return this;
   }
 
   @Override
-  public TaskQuery processDefinitionNameLike(String processDefinitionName) {
-  	this.processDefinitionNameLike = processDefinitionName;
-  	return this;
+  public TaskQuery processDefinitionNameLike(String processDefinitionNameLike) {
+    if (processDefinitionNamesLike == null) {
+      processDefinitionNamesLike = new ArrayList<String>();
+    }
+
+    processDefinitionNamesLike.add(processDefinitionNameLike);
+
+    return this;
   }
 
   @Override
   public TaskQuery dueDate(Date dueDate) {
-    this.dueDate = dueDate;
+    if (dueDates == null) {
+      dueDates = new ArrayList<Date>();
+    }
+
+    dueDates.add(dueDate);
+
     expressions.remove("dueDate");
     return this;
   }
@@ -763,7 +993,12 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery followUpDate(Date followUpDate) {
-    this.followUpDate = followUpDate;
+    if (followUpDates == null) {
+      followUpDates = new ArrayList<Date>();
+    }
+
+    followUpDates.add(followUpDate);
+
     expressions.remove("followUpDate");
     return this;
   }
@@ -823,19 +1058,29 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery excludeSubtasks() {
-    this.excludeSubtasks = true;
+    excludeSubtasks = true;
     return this;
   }
 
   @Override
   public TaskQuery active() {
-    this.suspensionState = SuspensionState.ACTIVE;
+    if (suspensionStates == null) {
+      suspensionStates = new ArrayList<SuspensionState>();
+    }
+
+    suspensionStates.add(SuspensionState.ACTIVE);
+
     return this;
   }
 
   @Override
   public TaskQuery suspended() {
-    this.suspensionState = SuspensionState.SUSPENDED;
+    if (suspensionStates == null) {
+      suspensionStates = new ArrayList<SuspensionState>();
+    }
+
+    suspensionStates.add(SuspensionState.SUSPENDED);
+
     return this;
   }
 
@@ -852,14 +1097,14 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   protected boolean hasExcludingConditions() {
-    return super.hasExcludingConditions()
+    return super.hasExcludingConditions()/*
       || CompareUtil.areNotInAscendingOrder(minPriority, priority, maxPriority)
       || CompareUtil.areNotInAscendingOrder(dueAfter, dueDate, dueBefore)
       || CompareUtil.areNotInAscendingOrder(followUpAfter, followUpDate, followUpBefore)
       || CompareUtil.areNotInAscendingOrder(createTimeAfter, createTime, createTimeBefore)
       || CompareUtil.elementIsNotContainedInArray(key, taskDefinitionKeys)
       || CompareUtil.elementIsNotContainedInArray(processDefinitionKey, processDefinitionKeys)
-      || CompareUtil.elementIsNotContainedInArray(processInstanceBusinessKey, processInstanceBusinessKeys);
+      || CompareUtil.elementIsNotContainedInArray(processInstanceBusinessKey, processInstanceBusinessKeys)*/;
   }
 
   public List<String> getCandidateGroups() {
@@ -935,8 +1180,10 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   protected void ensureVariablesInitialized() {
     VariableSerializers types = Context.getProcessEngineConfiguration().getVariableSerializers();
-    for(QueryVariableValue var : variables) {
-      var.initialize(types);
+    for(TaskQueryImpl query: logicalExpressionQueryRootNode.logicalExpressionQueryList) {
+      for (QueryVariableValue var : query.variables) {
+        var.initialize(types);
+      }
     }
   }
 
@@ -978,77 +1225,137 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery orderByTaskId() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.TASK_ID);
   }
 
   @Override
   public TaskQuery orderByTaskName() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.NAME);
   }
 
   @Override
   public TaskQuery orderByTaskNameCaseInsensitive() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     taskNameCaseInsensitive();
     return orderBy(TaskQueryProperty.NAME_CASE_INSENSITIVE);
   }
 
   @Override
   public TaskQuery orderByTaskDescription() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.DESCRIPTION);
   }
 
   @Override
   public TaskQuery orderByTaskPriority() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.PRIORITY);
   }
 
   @Override
   public TaskQuery orderByProcessInstanceId() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.PROCESS_INSTANCE_ID);
   }
 
   @Override
   public TaskQuery orderByCaseInstanceId() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.CASE_INSTANCE_ID);
   }
 
   @Override
   public TaskQuery orderByExecutionId() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.EXECUTION_ID);
   }
 
   @Override
   public TaskQuery orderByTenantId() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.TENANT_ID);
   }
 
   @Override
   public TaskQuery orderByCaseExecutionId() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.CASE_EXECUTION_ID);
   }
 
   @Override
   public TaskQuery orderByTaskAssignee() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.ASSIGNEE);
   }
 
   @Override
   public TaskQuery orderByTaskCreateTime() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.CREATE_TIME);
   }
 
   @Override
   public TaskQuery orderByDueDate() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.DUE_DATE);
   }
 
   @Override
   public TaskQuery orderByFollowUpDate() {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     return orderBy(TaskQueryProperty.FOLLOW_UP_DATE);
   }
 
   @Override
   public TaskQuery orderByProcessVariable(String variableName, ValueType valueType) {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     ensureNotNull("variableName", variableName);
     ensureNotNull("valueType", valueType);
 
@@ -1058,6 +1365,10 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery orderByExecutionVariable(String variableName, ValueType valueType) {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     ensureNotNull("variableName", variableName);
     ensureNotNull("valueType", valueType);
 
@@ -1067,6 +1378,10 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery orderByTaskVariable(String variableName, ValueType valueType) {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     ensureNotNull("variableName", variableName);
     ensureNotNull("valueType", valueType);
 
@@ -1076,6 +1391,10 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery orderByCaseExecutionVariable(String variableName, ValueType valueType) {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     ensureNotNull("variableName", variableName);
     ensureNotNull("valueType", valueType);
 
@@ -1085,6 +1404,10 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery orderByCaseInstanceVariable(String variableName, ValueType valueType) {
+    if (this != logicalExpressionQueryRootNode) {
+      throw new ProcessEngineException("Ordering is not allowed inside a nested query");
+    }
+
     ensureNotNull("variableName", variableName);
     ensureNotNull("valueType", valueType);
 
@@ -1096,13 +1419,35 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public List<Task> executeList(CommandContext commandContext, Page page) {
+    if (parentLogicalExpressionQuery != null) {
+      throw new ProcessEngineException("'executeList()' is not allowed inside a nested query");
+    }
+
     ensureVariablesInitialized();
     checkQueryOk();
-    List<Task> taskList = commandContext
-      .getTaskManager()
-      .findTasksByQueryCriteria(this);
 
-    if(initializeFormKeys) {
+    List<Task> taskList = null;
+
+    try {
+      taskList = commandContext
+        .getTaskManager()
+        .findTasksByQueryCriteria(logicalExpressionQueryRootNode.logicalExpressionQueryList.get(0));
+    } catch(PersistenceException e) {
+      if(e.getMessage().contains("Data conversion error converting \"()\"")) {
+        throw new ProcessEngineException("At least one filter has to be defined within a nested query");
+      } else {
+        throw new ProcessEngineException(e.getMessage());
+      }
+    }
+
+    boolean formKeyAvailability = false;
+    for (TaskQueryImpl query: logicalExpressionQueryRootNode.logicalExpressionQueryList) {
+      if (query.initializeFormKeys) {
+        formKeyAvailability = true;
+      }
+    }
+
+    if (formKeyAvailability) {
       for (Task task : taskList) {
         // initialize the form keys of the tasks
         ((TaskEntity) task).initializeFormKey();
@@ -1114,82 +1459,130 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public long executeCount(CommandContext commandContext) {
+    if (parentLogicalExpressionQuery != null) {
+      throw new ProcessEngineException("'executeList()' is not allowed inside a nested query");
+    }
+
     ensureVariablesInitialized();
     checkQueryOk();
-    return commandContext
-      .getTaskManager()
-      .findTaskCountByQueryCriteria(this);
+
+    try {
+      return commandContext
+        .getTaskManager()
+        .findTaskCountByQueryCriteria(logicalExpressionQueryRootNode.logicalExpressionQueryList.get(0));
+    } catch(PersistenceException e) {
+      if(e.getMessage().contains("Data conversion error converting \"()\"")) {
+        throw new ProcessEngineException("At least one filter has to be defined within a nested query");
+      } else {
+        throw new ProcessEngineException(e.getMessage());
+      }
+    }
   }
 
   //getters ////////////////////////////////////////////////////////////////
 
   public String getName() {
-    return name;
+    return names == null ? null : names.get(names.size()-1);
+  }
+
+  public ArrayList<String> getNames() {
+    return names;
   }
 
   public String getNameNotEqual() {
-    return nameNotEqual;
+    return namesNotEqual == null ? null : namesNotEqual.get(namesNotEqual.size()-1);
+  }
+
+  public ArrayList<String> getNamesNotEqual() {
+    return namesNotEqual;
   }
 
   public String getNameLike() {
-    return nameLike;
+    return namesLike == null ? null : namesLike.get(namesLike.size()-1);
+  }
+
+  public ArrayList<String> getNamesLike() {
+    return namesLike;
   }
 
   public String getNameNotLike() {
-    return nameNotLike;
+    return namesNotLike == null ? null : namesNotLike.get(namesNotLike.size()-1);
+  }
+
+  public ArrayList<String> getNamesNotLike() {
+    return namesNotLike;
   }
 
   public String getAssignee() {
-    return assignee;
+    return assignees == null ? null : assignees.get(assignees.size()-1);
+  }
+
+  public ArrayList<String> getAssignees() {
+    return assignees;
   }
 
   public String getAssigneeLike() {
-    return assigneeLike;
+    return assigneesLike == null ? null : assigneesLike.get(assigneesLike.size()-1);
+  }
+
+  public ArrayList<String> getAssigneesLike() {
+    return assigneesLike;
   }
 
   public String getInvolvedUser() {
-    return involvedUser;
+    return involvedUsers == null ? null : involvedUsers.get(involvedUsers.size()-1);
+  }
+
+  public ArrayList<String> getInvolvedUsers() {
+    return involvedUsers;
   }
 
   public String getOwner() {
-    return owner;
+    return owners == null ? null : owners.get(owners.size()-1);
+  }
+
+  public ArrayList<String> getOwners() {
+    return owners;
   }
 
   public Boolean isAssigned() {
-    if (assigned == null) {
-      return false;
-    } else {
-      return assigned;
-    }
+    return assignedTasks != null;
   }
 
   public Boolean isAssignedInternal() {
-    return assigned;
+    return assignedTasks == null ? null : true;
   }
 
   public boolean isUnassigned() {
-    if (unassigned == null) {
-      return false;
-    }
-    else {
-      return unassigned;
-    }
+    return unassignedTasks != null;
   }
 
   public Boolean isUnassignedInternal() {
-    return unassigned;
+    return unassignedTasks == null ? null : true;
   }
 
   public DelegationState getDelegationState() {
-    return delegationState;
+    return delegationStates == null || delegationStates.isEmpty() ? null : delegationStates.get(delegationStates.size()-1);
+  }
+
+  public ArrayList<DelegationState> getDelegationStates() {
+    return delegationStates;
   }
 
   public boolean isNoDelegationState() {
-    return noDelegationState;
+    if (delegationStates != null) {
+      for (DelegationState delegationState : delegationStates) {
+        if (delegationState == null) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   public String getDelegationStateString() {
-    return (delegationState!=null ? delegationState.toString() : null);
+    return delegationStates == null ? null : delegationStates.get(delegationStates.size()-1).toString();
   }
 
   public String getCandidateUser() {
@@ -1209,15 +1602,27 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String getProcessInstanceId() {
-    return processInstanceId;
+    return processInstanceIds == null ? null : processInstanceIds.get(processInstanceIds.size()-1);
+  }
+
+  public ArrayList<String> getProcessInstanceIds() {
+    return processInstanceIds;
   }
 
   public String getExecutionId() {
-    return executionId;
+    return executionIds == null ? null : executionIds.get(executionIds.size()-1);
+  }
+
+  public ArrayList<String> getExecutionIds() {
+    return executionIds;
   }
 
   public String[] getActivityInstanceIdIn() {
-    return activityInstanceIdIn;
+    return activityInstanceIds == null ? null : activityInstanceIds.toArray(new String[0]);
+  }
+
+  public ArrayList<String> getActivityInstanceIdsIn() {
+    return activityInstanceIds;
   }
 
   public String[] getTenantIds() {
@@ -1225,19 +1630,35 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String getTaskId() {
-    return taskId;
+    return taskIds == null ? null : taskIds.get(taskIds.size()-1);
+  }
+
+  public ArrayList<String> getTaskIds() {
+    return taskIds;
   }
 
   public String getDescription() {
-    return description;
+    return descriptions == null ? null : descriptions.get(descriptions.size()-1);
+  }
+
+  public ArrayList<String> getDescriptions() {
+    return descriptions;
   }
 
   public String getDescriptionLike() {
-    return descriptionLike;
+    return descriptionsLike == null ? null : descriptionsLike.get(descriptionsLike.size()-1);
+  }
+
+  public ArrayList<String> getDescriptionsLike() {
+    return descriptionsLike;
   }
 
   public Integer getPriority() {
-    return priority;
+    return priorities == null ? null : priorities.get(priorities.size()-1);
+  }
+
+  public ArrayList<Integer> getPriorities() {
+    return priorities;
   }
 
   public Integer getMinPriority() {
@@ -1249,7 +1670,11 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public Date getCreateTime() {
-    return createTime;
+    return createTimes == null ? null : createTimes.get(createTimes.size()-1);
+  }
+
+  public ArrayList<Date> getCreateTimes() {
+    return createTimes;
   }
 
   public Date getCreateTimeBefore() {
@@ -1261,19 +1686,31 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String getKey() {
-    return key;
+    return keys == null ? null : keys.get(keys.size()-1);
   }
 
   public String[] getKeys() {
-    return taskDefinitionKeys;
+    return taskDefinitionKeys == null ? null : taskDefinitionKeys.toArray(new String[0]);
+  }
+
+  public ArrayList<String> getKeysOr() {
+    return keys;
   }
 
   public String getKeyLike() {
-    return keyLike;
+    return keysLike == null ? null : keysLike.get(keysLike.size()-1);
+  }
+
+  public ArrayList<String> getKeysLike() {
+    return keysLike;
   }
 
   public String getParentTaskId() {
-    return parentTaskId;
+    return parentTaskIds == null ? null : parentTaskIds.get(parentTaskIds.size()-1);
+  }
+
+  public ArrayList<String> getParentTaskIds() {
+    return parentTaskIds;
   }
 
   public List<TaskQueryVariableValue> getVariables() {
@@ -1281,39 +1718,67 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String getProcessDefinitionKey() {
-    return processDefinitionKey;
+    return processDefinitionKeys == null ? null : processDefinitionKeys.get(processDefinitionKeys.size()-1);
   }
 
-  public String[] getProcessDefinitionKeys() {
+  public ArrayList<String> getProcessDefinitionKeysOr() {
     return processDefinitionKeys;
   }
 
+  public String[] getProcessDefinitionKeys() {
+    return processDefinitionKeysIn == null ? null : processDefinitionKeysIn.toArray(new String[0]);
+  }
+
   public String getProcessDefinitionId() {
-    return processDefinitionId;
+    return processDefinitionIds == null ? null : processDefinitionIds.get(processDefinitionIds.size()-1);
+  }
+
+  public ArrayList<String> getProcessDefinitionIds() {
+    return processDefinitionIds;
   }
 
   public String getProcessDefinitionName() {
-    return processDefinitionName;
+    return processDefinitionNames == null ? null : processDefinitionNames.get(processDefinitionNames.size()-1);
+  }
+
+  public ArrayList<String> getProcessDefinitionNames() {
+    return processDefinitionNames;
   }
 
   public String getProcessDefinitionNameLike() {
-    return processDefinitionNameLike;
+    return processDefinitionNamesLike == null ? null : processDefinitionNamesLike.get(processDefinitionNamesLike.size()-1);
+  }
+
+  public ArrayList<String> getProcessDefinitionNamesLike() {
+    return processDefinitionNamesLike;
   }
 
   public String getProcessInstanceBusinessKey() {
-    return processInstanceBusinessKey;
+    return processInstanceBusinessKeys == null ? null : processInstanceBusinessKeys.get(processInstanceBusinessKeys.size()-1);
   }
 
-  public String[] getProcessInstanceBusinessKeys() {
+  public ArrayList<String> getProcessInstanceBusinessKeysOr() {
     return processInstanceBusinessKeys;
   }
 
+  public String[] getProcessInstanceBusinessKeys() {
+    return processInstanceBusinessKeysIn == null ? null : processInstanceBusinessKeysIn.toArray(new String[0]);
+  }
+
   public String getProcessInstanceBusinessKeyLike() {
-    return processInstanceBusinessKeyLike;
+    return processInstanceBusinessKeysLike == null ? null : processInstanceBusinessKeysLike.get(processInstanceBusinessKeysLike.size()-1);
+  }
+
+  public ArrayList<String> getProcessInstanceBusinessKeysLike() {
+    return processInstanceBusinessKeysLike;
   }
 
   public Date getDueDate() {
-    return dueDate;
+    return dueDates == null ? null : dueDates.get(dueDates.size()-1);
+  }
+
+  public ArrayList<Date> getDueDates() {
+    return dueDates;
   }
 
   public Date getDueBefore() {
@@ -1325,7 +1790,11 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public Date getFollowUpDate() {
-    return followUpDate;
+    return followUpDates == null ? null : followUpDates.get(followUpDates.size()-1);
+  }
+
+  public ArrayList<Date> getFollowUpDates() {
+    return followUpDates;
   }
 
   public Date getFollowUpBefore() {
@@ -1345,35 +1814,67 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String getCaseInstanceId() {
-    return caseInstanceId;
+    return caseInstanceIds == null ? null : caseInstanceIds.get(caseInstanceIds.size()-1);
+  }
+
+  public ArrayList<String> getCaseInstanceIds() {
+    return caseInstanceIds;
   }
 
   public String getCaseInstanceBusinessKey() {
-    return caseInstanceBusinessKey;
+    return caseInstanceBusinessKeys == null ? null : caseInstanceBusinessKeys.get(caseInstanceBusinessKeys.size()-1);
+  }
+
+  public ArrayList<String> getCaseInstanceBusinessKeys() {
+    return caseInstanceBusinessKeys;
   }
 
   public String getCaseInstanceBusinessKeyLike() {
-    return caseInstanceBusinessKeyLike;
+    return caseInstanceBusinessKeysLike == null ? null : caseInstanceBusinessKeysLike.get(caseInstanceBusinessKeysLike.size()-1);
+  }
+
+  public ArrayList<String> getCaseInstanceBusinessKeysLike() {
+    return caseInstanceBusinessKeysLike;
   }
 
   public String getCaseExecutionId() {
-    return caseExecutionId;
+    return caseExecutionIds == null ? null : caseExecutionIds.get(caseExecutionIds.size()-1);
+  }
+
+  public ArrayList<String> getCaseExecutionIds() {
+    return caseExecutionIds;
   }
 
   public String getCaseDefinitionId() {
-    return caseDefinitionId;
+    return caseDefinitionIds == null ? null : caseDefinitionIds.get(caseDefinitionIds.size()-1);
+  }
+
+  public ArrayList<String> getCaseDefinitionIds() {
+    return caseDefinitionIds;
   }
 
   public String getCaseDefinitionKey() {
-    return caseDefinitionKey;
+    return caseDefinitionKeys == null ? null : caseDefinitionKeys.get(caseDefinitionKeys.size()-1);
+  }
+
+  public ArrayList<String> getCaseDefinitionKeys() {
+    return caseDefinitionKeys;
   }
 
   public String getCaseDefinitionName() {
-    return caseDefinitionName;
+    return caseDefinitionNames == null ? null : caseDefinitionNames.get(caseDefinitionNames.size()-1);
+  }
+
+  public ArrayList<String> getCaseDefinitionNames() {
+    return caseDefinitionNames;
   }
 
   public String getCaseDefinitionNameLike() {
-    return caseDefinitionNameLike;
+    return caseDefinitionNamesLike == null ? null : caseDefinitionNamesLike.get(caseDefinitionNamesLike.size()-1);
+  }
+
+  public ArrayList<String> getCaseDefinitionNamesLike() {
+    return caseDefinitionNamesLike;
   }
 
   public boolean isInitializeFormKeys() {
@@ -1386,6 +1887,14 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   public boolean isTenantIdSet() {
     return isTenantIdSet;
+  }
+
+  public String getLogicalExpression() {
+    return logicalExpression.toString();
+  }
+
+  public List<TaskQueryImpl> getLogicalExpressionQueryChildren() {
+    return logicalExpressionQueryChildren;
   }
 
   @Override
@@ -1892,14 +2401,60 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery taskNameNotEqual(String name) {
-    this.nameNotEqual = name;
+    if (namesNotEqual == null) {
+      namesNotEqual = new ArrayList<String>();
+    }
+
+    namesNotEqual.add(name);
+
     return this;
   }
 
   @Override
   public TaskQuery taskNameNotLike(String nameNotLike) {
     ensureNotNull("Task nameNotLike", nameNotLike);
-    this.nameNotLike = nameNotLike;
+    if (namesNotLike == null) {
+      namesNotLike = new ArrayList<String>();
+    }
+
+    namesNotLike.add(nameNotLike);
+
     return this;
   }
+
+  @Override
+  public TaskQuery startAnd() {
+    return openLogicalOperator(logicalExpressionEnum.and);
+  }
+
+  @Override
+  public TaskQuery startOr() {
+    return openLogicalOperator(logicalExpressionEnum.or);
+  }
+
+  @Override
+  public TaskQuery endAnd() {
+    if (parentLogicalExpressionQuery == null || logicalExpression == logicalExpressionEnum.or) {
+      throw new ProcessEngineException("'endAnd()' is only allowed after invocation of 'startAnd()'");
+    }
+
+    return parentLogicalExpressionQuery;
+  }
+
+  @Override
+  public TaskQuery endOr() {
+    if (parentLogicalExpressionQuery == null || logicalExpression == logicalExpressionEnum.and) {
+      //throw new ProcessEngineException("'endOr()' is only allowed after invocation of 'startOr()'");
+    }
+
+    return parentLogicalExpressionQuery;
+  }
+
+  private TaskQuery openLogicalOperator(logicalExpressionEnum logicalExpression) {
+    TaskQueryImpl queryInstance = new TaskQueryImpl(logicalExpression, this);
+    logicalExpressionQueryChildren.add(queryInstance);
+
+    return queryInstance;
+  }
+
 }

@@ -28,7 +28,7 @@ import org.camunda.bpm.engine.variable.type.ValueType;
  * @author Joram Barrez
  * @author Falko Menge
  */
-public interface TaskQuery extends Query<TaskQuery, Task>{
+public interface TaskQuery extends Query<TaskQuery, Task> {
 
   /**
    * Only select tasks with the given task id (in practice, there will be
@@ -754,7 +754,7 @@ public interface TaskQuery extends Query<TaskQuery, Task>{
 
   /** Only select tasks which have no tenant id. */
   TaskQuery withoutTenantId();
-
+  
   // ordering ////////////////////////////////////////////////////////////
 
   /** Order by task id (needs to be followed by {@link #asc()} or {@link #desc()}). */
@@ -834,4 +834,12 @@ public interface TaskQuery extends Query<TaskQuery, Task>{
   /** Order by tenant id (needs to be followed by {@link #asc()} or {@link #desc()}).
    * Note that the ordering of tasks without tenant id is database-specific. */
   TaskQuery orderByTenantId();
+  
+  TaskQuery startAnd();
+
+  TaskQuery endAnd();
+
+  TaskQuery startOr();
+
+  TaskQuery endOr();
 }
