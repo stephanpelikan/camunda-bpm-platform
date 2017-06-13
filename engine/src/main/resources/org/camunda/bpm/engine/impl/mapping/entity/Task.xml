@@ -411,8 +411,8 @@
           <if test="logicalExpressionQuery.noDelegationState">
             ${logicalExpressionQuery.logicalExpression} RES.DELEGATION_ IS NULL
           </if>
-          <if test="logicalExpressionQuery.delegationState != null">
-              ${logicalExpressionQuery.logicalExpression} RES.DELEGATION_ in
+          <if test="logicalExpressionQuery.delegationStates != null">
+            ${logicalExpressionQuery.logicalExpression} RES.DELEGATION_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.delegationStates"
                      open="(" separator="," close=")">
               <choose>
@@ -746,7 +746,7 @@
                 #{tenantId}
               </foreach>
             </if>
-            <if test="logicalExpressionQuery.tenantIds == null">
+            <if test="logicalExpressionQuery.withoutTenantIds == null">
               ${logicalExpressionQuery.logicalExpression} RES.TENANT_ID_ is null
             </if>
           </if>
@@ -767,7 +767,7 @@
                 <if test="logicalExpressionQuery.candidateUser != null">
                   or
                 </if>
-                I_${i}.GROUP_ID_ IN
+                I_${i}.GROUP_ID_ in
                 <foreach item="group" index="index" collection="logicalExpressionQuery.candidateGroups"
                          open="(" separator="," close=")">
                   #{group}
@@ -849,12 +849,16 @@
           </foreach>
 
           <if test="logicalExpressionQuery.suspensionState != null">
-            <if test="logicalExpressionQuery.suspensionState.stateCode == 1">
-              ${logicalExpressionQuery.logicalExpression} RES.SUSPENSION_STATE_ = 1
-            </if>
-            <if test="logicalExpressionQuery.suspensionState.stateCode == 2">
-              ${logicalExpressionQuery.logicalExpression} RES.SUSPENSION_STATE_ = 2
-            </if>
+            ${logicalExpressionQuery.logicalExpression} RES.SUSPENSION_STATE_ in
+            <foreach item="item" index="index" collection="logicalExpressionQuery.suspensionStates"
+                     open="(" separator="," close=")">
+              <choose>
+                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.suspensionStates.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
+                  #{item.stateCode}
+                </when>
+                <otherwise></otherwise>
+              </choose>
+            </foreach>
           </if>
 
           ${closingParentheses.get(i)}

@@ -53,8 +53,11 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   protected ArrayList<String> assigneesLike;
   protected ArrayList<String> involvedUsers;
   protected ArrayList<String> owners;
+
+  // Todo
   protected ArrayList<Boolean> unassignedTasks;
   protected ArrayList<Boolean> assignedTasks;
+
   protected ArrayList<DelegationState> delegationStates;
   protected String candidateUser;
   protected String candidateGroup;
@@ -90,14 +93,13 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   protected boolean followUpNullAccepted=false;
   protected Date followUpAfter;
   protected boolean excludeSubtasks = false;
-  protected SuspensionState suspensionState;
   protected ArrayList<SuspensionState> suspensionStates;
   protected boolean initializeFormKeys = false;
   protected boolean taskNameCaseInsensitive = false;
 
   protected ArrayList<String> parentTaskIds;
   protected boolean isTenantIdSet = false;
-  protected String[] tenantIds;
+  protected ArrayList<String> tenantIds;
 
   // case management /////////////////////////////
   protected ArrayList<String> caseDefinitionKeys;
@@ -562,7 +564,11 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery tenantIdIn(String... tenantIds) {
     ensureNotNull("tenantIds", (Object[]) tenantIds);
-    this.tenantIds = tenantIds;
+    if (this.tenantIds == null) {
+      this.tenantIds = new ArrayList<String>();
+    }
+
+    this.tenantIds.addAll(Arrays.asList(tenantIds));
     this.isTenantIdSet = true;
     return this;
   }
@@ -1626,7 +1632,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String[] getTenantIds() {
-    return tenantIds;
+    return tenantIds == null ? null : tenantIds.toArray(new String[0]);
   }
 
   public String getTaskId() {
@@ -1810,7 +1816,11 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public SuspensionState getSuspensionState() {
-    return suspensionState;
+    return suspensionStates == null ? null : suspensionStates.get(suspensionStates.size()-1);
+  }
+
+  public ArrayList<SuspensionState> getSuspensionStates() {
+    return suspensionStates;
   }
 
   public String getCaseInstanceId() {

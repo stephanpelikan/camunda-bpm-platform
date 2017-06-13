@@ -24,6 +24,7 @@ import org.camunda.bpm.engine.runtime.CaseExecution;
 import org.camunda.bpm.engine.runtime.CaseInstance;
 import org.camunda.bpm.engine.runtime.Execution;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
+import org.camunda.bpm.engine.task.DelegationState;
 import org.camunda.bpm.engine.task.Task;
 import org.camunda.bpm.engine.task.TaskQuery;
 import org.camunda.bpm.engine.test.Deployment;
@@ -3217,8 +3218,7 @@ public class TaskQueryOrTest extends PluggableProcessEngineTestCase {
 
     // then
     assertEquals(2, tasks.size());
-    taskService.deleteTask(task1.getId());
-    taskService.deleteTask(task2.getId());
+    taskService.deleteTasks(Arrays.asList(task1.getId(), task2.getId()), true);
   }
 
   public void testQueryTaskFollowUpDates() throws ParseException {
@@ -3246,7 +3246,7 @@ public class TaskQueryOrTest extends PluggableProcessEngineTestCase {
     taskService.deleteTasks(Arrays.asList(task1.getId(), task2.getId()), true);
   }
 
-  public void testQueryTaskInvolvedUsers() throws ParseException {
+  public void testQueryTaskInvolvedUsers() {
     // given
     Task task1 = taskService.newTask("Task1");
     taskService.saveTask(task1);
@@ -3290,6 +3290,75 @@ public class TaskQueryOrTest extends PluggableProcessEngineTestCase {
       .endOr();
 
     assertEquals(2, query.count());
+  }
+
+  public void testQueryTaskDelegationStates() {
+    // given
+    Task task1 = taskService.newTask();
+    task1.setName("Task 1");
+    task1.setDelegationState(DelegationState.PENDING);
+    taskService.saveTask(task1);
+
+    Task task2 = taskService.newTask();
+    task2.setName("Task 2");
+    task2.setDelegationState(DelegationState.RESOLVED);
+    taskService.saveTask(task2);
+
+    Task task3 = taskService.newTask();
+    task3.setName("Task 3");
+    task3.setDelegationState(null);
+    taskService.saveTask(task3);
+
+    // when
+    List<Task> tasks = taskService.createTaskQuery()
+      .taskNameLike("Task%")
+      .startOr()
+        .taskDelegationState(DelegationState.PENDING)
+        .taskDelegationState(DelegationState.RESOLVED)
+        .taskDelegationState(null)
+      .endOr()
+      .list();
+
+    // then
+    assertEquals(3, tasks.size());
+    taskService.deleteTasks(Arrays.asList(task1.getId(), task2.getId(), task3.getId()), true);
+  }
+
+  public void testQuerySuspensionState() {
+    // given
+    BpmnModelInstance processDefinition1 = Bpmn.createExecutableProcess("processDefinition1")
+      .startEvent()
+        .userTask()
+          .name("Task 1")
+      .endEvent()
+      .done();
+
+    deployment(processDefinition1);
+
+    BpmnModelInstance processDefinition2 = Bpmn.createExecutableProcess("processDefinition2")
+      .startEvent()
+        .userTask()
+          .name("Task 2")
+      .endEvent()
+      .done();
+
+    deployment(processDefinition2);
+
+    ProcessInstance pi1 = runtimeService.startProcessInstanceByKey("processDefinition1");
+    runtimeService.startProcessInstanceByKey("processDefinition2");
+    runtimeService.suspendProcessInstanceById(pi1.getId());
+
+    // when
+    List<Task> tasks = taskService.createTaskQuery()
+      .taskNameLike("Task%")
+      .startOr()
+        .suspended()
+        .active()
+      .endOr()
+      .list();
+
+    // then
+    assertEquals(2, tasks.size());
   }
 
   public void testExtendTaskQueryList_ProcessDefinitionKeyIn() {
