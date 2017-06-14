@@ -39,85 +39,84 @@ import org.camunda.bpm.engine.variable.type.ValueType;
 public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements TaskQuery {
 
   private static final long serialVersionUID = 1L;
-  protected ArrayList<String> taskIds;
-  protected ArrayList<String> names;
-  protected ArrayList<String> namesNotEqual;
-  protected ArrayList<String> namesLike;
-  protected ArrayList<String> namesNotLike;
-  protected ArrayList<String> descriptions;
-  protected ArrayList<String> descriptionsLike;
-  protected ArrayList<Integer> priorities;
+  protected List<String> taskIds;
+  protected List<String> names;
+  protected List<String> namesNotEqual;
+  protected List<String> namesLike;
+  protected List<String> namesNotLike;
+  protected List<String> descriptions;
+  protected List<String> descriptionsLike;
+  protected List<Integer> priorities;
   protected Integer minPriority;
   protected Integer maxPriority;
-  protected ArrayList<String> assignees;
-  protected ArrayList<String> assigneesLike;
-  protected ArrayList<String> involvedUsers;
-  protected ArrayList<String> owners;
+  protected List<String> assignees;
+  protected List<String> assigneesLike;
+  protected List<String> involvedUsers;
+  protected List<String> owners;
+  protected Boolean unassignedTasks;
+  protected Boolean assignedTasks;
 
-  // Todo
-  protected ArrayList<Boolean> unassignedTasks;
-  protected ArrayList<Boolean> assignedTasks;
+  protected List<DelegationState> delegationStates;
 
-  protected ArrayList<DelegationState> delegationStates;
-  protected String candidateUser;
-  protected String candidateGroup;
+  protected List<String> candidateUsers;
   protected List<String> candidateGroups;
   protected Boolean withCandidateGroups;
   protected Boolean withoutCandidateGroups;
   protected Boolean withCandidateUsers;
   protected Boolean withoutCandidateUsers;
+
   protected Boolean includeAssignedTasks;
-  protected ArrayList<String> processInstanceIds;
-  protected ArrayList<String> executionIds;
-  protected ArrayList<String> activityInstanceIds;
-  protected ArrayList<Date> createTimes;
+  protected List<String> processInstanceIds;
+  protected List<String> executionIds;
+  protected List<String> activityInstanceIds;
+  protected List<Date> createTimes;
   protected Date createTimeBefore;
   protected Date createTimeAfter;
-  protected ArrayList<String> keys;
-  protected ArrayList<String> keysLike;
-  protected ArrayList<String> taskDefinitionKeys;
-  protected ArrayList<String> processDefinitionKeys;
-  protected ArrayList<String> processDefinitionKeysIn;
-  protected ArrayList<String> processDefinitionIds;
-  protected ArrayList<String> processDefinitionNames;
-  protected ArrayList<String> processDefinitionNamesLike;
-  protected ArrayList<String> processInstanceBusinessKeys;
-  protected ArrayList<String> processInstanceBusinessKeysIn;
-  protected ArrayList<String> processInstanceBusinessKeysLike;
+  protected List<String> keys;
+  protected List<String> keysLike;
+  protected List<String> taskDefinitionKeys;
+  protected List<String> processDefinitionKeys;
+  protected List<String> processDefinitionKeysIn;
+  protected List<String> processDefinitionIds;
+  protected List<String> processDefinitionNames;
+  protected List<String> processDefinitionNamesLike;
+  protected List<String> processInstanceBusinessKeys;
+  protected List<String> processInstanceBusinessKeysIn;
+  protected List<String> processInstanceBusinessKeysLike;
   protected List<TaskQueryVariableValue> variables = new ArrayList<TaskQueryVariableValue>();
-  protected ArrayList<Date> dueDates;
+  protected List<Date> dueDates;
   protected Date dueBefore;
   protected Date dueAfter;
-  protected ArrayList<Date> followUpDates;
+  protected List<Date> followUpDates;
   protected Date followUpBefore;
   protected boolean followUpNullAccepted=false;
   protected Date followUpAfter;
   protected boolean excludeSubtasks = false;
-  protected ArrayList<SuspensionState> suspensionStates;
+  protected List<SuspensionState> suspensionStates;
   protected boolean initializeFormKeys = false;
   protected boolean taskNameCaseInsensitive = false;
 
-  protected ArrayList<String> parentTaskIds;
+  protected List<String> parentTaskIds;
   protected boolean isTenantIdSet = false;
-  protected ArrayList<String> tenantIds;
+  protected List<String> tenantIds;
 
   // case management /////////////////////////////
-  protected ArrayList<String> caseDefinitionKeys;
-  protected ArrayList<String> caseDefinitionIds;
-  protected ArrayList<String> caseDefinitionNames;
-  protected ArrayList<String> caseDefinitionNamesLike;
-  protected ArrayList<String> caseInstanceIds;
-  protected ArrayList<String> caseInstanceBusinessKeys;
-  protected ArrayList<String> caseInstanceBusinessKeysLike;
-  protected ArrayList<String> caseExecutionIds;
+  protected List<String> caseDefinitionKeys;
+  protected List<String> caseDefinitionIds;
+  protected List<String> caseDefinitionNames;
+  protected List<String> caseDefinitionNamesLike;
+  protected List<String> caseInstanceIds;
+  protected List<String> caseInstanceBusinessKeys;
+  protected List<String> caseInstanceBusinessKeysLike;
+  protected List<String> caseExecutionIds;
 
   // logical expression query /////////////////////////////
-  protected ArrayList<TaskQueryImpl> logicalExpressionQueryList = null;
+  protected List<TaskQueryImpl> logicalExpressionQueryList = null;
   protected TaskQueryImpl logicalExpressionQueryRootNode = null;
   protected List<TaskQueryImpl> logicalExpressionQueryChildren = new ArrayList<TaskQueryImpl>();
   protected TaskQueryImpl parentLogicalExpressionQuery = null;
-  protected logicalExpressionEnum logicalExpression = logicalExpressionEnum.and;
-  protected enum logicalExpressionEnum {and, or}
+  protected LogicalExpressionEnum logicalExpression = LogicalExpressionEnum.and;
+  protected enum LogicalExpressionEnum {and, or}
 
   public TaskQueryImpl() {
     logicalExpressionQueryRootNode = this;
@@ -133,7 +132,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
     logicalExpressionQueryRootNode.logicalExpressionQueryList.add(this);
   }
 
-  public TaskQueryImpl(logicalExpressionEnum logicalExpression, TaskQueryImpl parentLogicalExpressionQuery) {
+  public TaskQueryImpl(LogicalExpressionEnum logicalExpression, TaskQueryImpl parentLogicalExpressionQuery) {
     this.logicalExpression = logicalExpression;
     this.parentLogicalExpressionQuery = parentLogicalExpressionQuery;
     logicalExpressionQueryRootNode = parentLogicalExpressionQuery.logicalExpressionQueryRootNode;
@@ -144,7 +143,11 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQueryImpl taskId(String taskId) {
     ensureNotNull("Task id", taskId);
 
-    if (taskIds == null) {
+    if (taskIds == null || logicalExpression == LogicalExpressionEnum.and) {
+      taskIds = new ArrayList<String>();
+    }
+
+    if (logicalExpression == LogicalExpressionEnum.and) {
       taskIds = new ArrayList<String>();
     }
 
@@ -155,7 +158,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQueryImpl taskName(String name) {
-    if (names == null) {
+    ensureNotNull("Task name", name);
+    if (names == null || logicalExpression == LogicalExpressionEnum.and) {
       names = new ArrayList<String>();
     }
 
@@ -167,8 +171,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQueryImpl taskNameLike(String nameLike) {
     ensureNotNull("Task nameLike", nameLike);
-
-    if (namesLike == null) {
+    if (namesLike == null || logicalExpression == LogicalExpressionEnum.and) {
       namesLike = new ArrayList<String>();
     }
 
@@ -180,8 +183,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQueryImpl taskDescription(String description) {
     ensureNotNull("Description", description);
-
-    if (descriptions == null) {
+    if (descriptions == null || logicalExpression == LogicalExpressionEnum.and) {
       descriptions = new ArrayList<String>();
     }
 
@@ -193,8 +195,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery taskDescriptionLike(String descriptionLike) {
     ensureNotNull("Task descriptionLike", descriptionLike);
-
-    if (descriptionsLike == null) {
+    if (descriptionsLike == null || logicalExpression == LogicalExpressionEnum.and) {
       descriptionsLike = new ArrayList<String>();
     }
 
@@ -207,7 +208,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQuery taskPriority(Integer priority) {
     ensureNotNull("Priority", priority);
 
-    if (priorities == null) {
+    if (priorities == null || logicalExpression == LogicalExpressionEnum.and) {
       priorities = new ArrayList<Integer>();
     }
 
@@ -233,8 +234,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQueryImpl taskAssignee(String assignee) {
     ensureNotNull("Assignee", assignee);
-
-    if (assignees == null) {
+    if (assignees == null || logicalExpression == LogicalExpressionEnum.and) {
       assignees = new ArrayList<String>();
     }
 
@@ -254,8 +254,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery taskAssigneeLike(String assignee) {
     ensureNotNull("Assignee", assignee);
-
-    if (assigneesLike == null) {
+    if (assigneesLike == null || logicalExpression == LogicalExpressionEnum.and) {
       assigneesLike = new ArrayList<String>();
     }
 
@@ -275,8 +274,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQueryImpl taskOwner(String owner) {
     ensureNotNull("Owner", owner);
-
-    if (owners == null) {
+    if (owners == null || logicalExpression == LogicalExpressionEnum.and) {
       owners = new ArrayList<String>();
     }
 
@@ -302,33 +300,27 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery taskUnassigned() {
-    if (unassignedTasks == null) {
-      unassignedTasks = new ArrayList<Boolean>();
-    }
-
-    unassignedTasks.add(true);
+    unassignedTasks = true;
 
     return this;
   }
 
   @Override
   public TaskQuery taskAssigned() {
-    if (assignedTasks == null) {
-      assignedTasks = new ArrayList<Boolean>();
-    }
-
-    assignedTasks.add(true);
+    assignedTasks = true;
 
     return this;
   }
 
   @Override
   public TaskQuery taskDelegationState(DelegationState delegationState) {
-    if (delegationStates == null) {
+    if (delegationStates == null || logicalExpression == LogicalExpressionEnum.and) {
       delegationStates = new ArrayList<DelegationState>();
     }
 
-    delegationStates.add(delegationState);
+    if (delegationState != null) {
+      delegationStates.add(delegationState);
+    }
 
     return this;
   }
@@ -337,15 +329,17 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQueryImpl taskCandidateUser(String candidateUser) {
     ensureNotNull("Candidate user", candidateUser);
 
-    if(logicalExpression == logicalExpressionEnum.and) {
-      if (candidateGroup != null || expressions.containsKey("taskCandidateGroup")) {
-        throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroup");
-      }
+    if(logicalExpression == LogicalExpressionEnum.and) {
       if (candidateGroups != null || expressions.containsKey("taskCandidateGroupIn")) {
-        throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroupIn");
+        throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroup/candidateGroupIn");
       }
     }
-    this.candidateUser = candidateUser;
+
+    if (candidateUsers == null || logicalExpression == LogicalExpressionEnum.and) {
+      candidateUsers = new ArrayList<String>();
+    }
+
+    candidateUsers.add(candidateUser);
     expressions.remove("taskCandidateUser");
     return this;
   }
@@ -354,12 +348,9 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQuery taskCandidateUserExpression(String candidateUserExpression) {
     ensureNotNull("Candidate user expression", candidateUserExpression);
 
-    if(logicalExpression == logicalExpressionEnum.and) {
-      if (candidateGroup != null || expressions.containsKey("taskCandidateGroup")) {
-        throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroup");
-      }
+    if(logicalExpression == LogicalExpressionEnum.and) {
       if (candidateGroups != null || expressions.containsKey("taskCandidateGroupIn")) {
-        throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroupIn");
+        throw new ProcessEngineException("Invalid query usage: cannot set both candidateUser and candidateGroup/candidateGroupIn");
       }
     }
 
@@ -370,8 +361,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQueryImpl taskInvolvedUser(String involvedUser) {
     ensureNotNull("Involved user", involvedUser);
-
-    if (involvedUsers == null) {
+    if (involvedUsers == null || logicalExpression == LogicalExpressionEnum.and) {
       involvedUsers = new ArrayList<String>();
     }
 
@@ -416,8 +406,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQueryImpl taskCandidateGroup(String candidateGroup) {
     ensureNotNull("Candidate group", candidateGroup);
 
-    if(logicalExpression == logicalExpressionEnum.and) {
-      if (candidateUser != null || expressions.containsKey("taskCandidateUser")) {
+    if(logicalExpression == LogicalExpressionEnum.and) {
+      if (candidateUsers != null || expressions.containsKey("taskCandidateUser")) {
         throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroup and candidateUser");
       }
       if (candidateGroups != null || expressions.containsKey("taskCandidateGroupIn")) {
@@ -425,7 +415,11 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
       }
     }
 
-    this.candidateGroup = candidateGroup;
+    if (candidateGroups == null || logicalExpression == LogicalExpressionEnum.and) {
+      candidateGroups = new ArrayList<String>();
+    }
+
+    candidateGroups.add(candidateGroup);
     expressions.remove("taskCandidateGroup");
     return this;
   }
@@ -434,7 +428,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQuery taskCandidateGroupExpression(String candidateGroupExpression) {
     ensureNotNull("Candidate group expression", candidateGroupExpression);
 
-    if (candidateUser != null || expressions.containsKey("taskCandidateUser")) {
+    if (candidateUsers != null || expressions.containsKey("taskCandidateUser")) {
       throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroup and candidateUser");
     }
     if (candidateGroups != null || expressions.containsKey("taskCandidateGroupIn")) {
@@ -449,16 +443,20 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQuery taskCandidateGroupIn(List<String> candidateGroups) {
     ensureNotEmpty("Candidate group list", candidateGroups);
 
-    if(logicalExpression == logicalExpressionEnum.and) {
-      if (candidateUser != null || expressions.containsKey("taskCandidateUser")) {
+    if(logicalExpression == LogicalExpressionEnum.and) {
+      if (candidateUsers != null || expressions.containsKey("taskCandidateUser")) {
         throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroupIn and candidateUser");
       }
-      if (candidateGroup != null || expressions.containsKey("taskCandidateGroup")) {
+      if (this.candidateGroups != null || expressions.containsKey("taskCandidateGroup")) {
         throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroupIn and candidateGroup");
       }
     }
 
-    this.candidateGroups = candidateGroups;
+    if (this.candidateGroups == null || logicalExpression == LogicalExpressionEnum.and) {
+      this.candidateGroups = new ArrayList<String>();
+    }
+
+    this.candidateGroups.addAll(candidateGroups);
     expressions.remove("taskCandidateGroupIn");
     return this;
   }
@@ -467,10 +465,10 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   public TaskQuery taskCandidateGroupInExpression(String candidateGroupsExpression) {
     ensureNotEmpty("Candidate group list expression", candidateGroupsExpression);
 
-    if (candidateUser != null || expressions.containsKey("taskCandidateUser")) {
+    if (candidateUsers != null || expressions.containsKey("taskCandidateUser")) {
       throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroupIn and candidateUser");
     }
-    if (candidateGroup != null || expressions.containsKey("taskCandidateGroup")) {
+    if (candidateGroups != null || expressions.containsKey("taskCandidateGroup")) {
       throw new ProcessEngineException("Invalid query usage: cannot set both candidateGroupIn and candidateGroup");
     }
 
@@ -480,9 +478,9 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery includeAssignedTasks() {
-    if (candidateUser == null && candidateGroup == null && candidateGroups == null && !isWithCandidateGroups() && !isWithoutCandidateGroups() && !isWithCandidateUsers() && !isWithoutCandidateUsers()
-        && !expressions.containsKey("taskCandidateUser") && !expressions.containsKey("taskCandidateGroup")
-        && !expressions.containsKey("taskCandidateGroupIn")) {
+    if (candidateUsers == null && candidateGroups == null && candidateGroups == null && !isWithCandidateGroups() && !isWithoutCandidateGroups() && !isWithCandidateUsers() && !isWithoutCandidateUsers()
+      && !expressions.containsKey("taskCandidateUser") && !expressions.containsKey("taskCandidateGroup")
+      && !expressions.containsKey("taskCandidateGroupIn")) {
       throw new ProcessEngineException("Invalid query usage: candidateUser, candidateGroup, candidateGroupIn, withCandidateGroups, withoutCandidateGroups, withCandidateUsers, withoutCandidateUsers has to be called before 'includeAssignedTasks'.");
     }
 
@@ -497,7 +495,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQueryImpl processInstanceId(String processInstanceId) {
-    if (processInstanceIds == null) {
+    ensureNotNull("Task processInstanceId", processInstanceId);
+    if (processInstanceIds == null || logicalExpression == LogicalExpressionEnum.and) {
       processInstanceIds = new ArrayList<String>();
     }
 
@@ -508,7 +507,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQueryImpl processInstanceBusinessKey(String processInstanceBusinessKey) {
-    if (processInstanceBusinessKeys == null) {
+    ensureNotNull("Task processInstanceBusinessKey", processInstanceBusinessKey);
+    if (processInstanceBusinessKeys == null || logicalExpression == LogicalExpressionEnum.and) {
       processInstanceBusinessKeys = new ArrayList<String>();
     }
 
@@ -519,7 +519,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery processInstanceBusinessKeyIn(String... processInstanceBusinessKeys) {
-    if (processInstanceBusinessKeysIn == null) {
+    if (processInstanceBusinessKeysIn == null || logicalExpression == LogicalExpressionEnum.and) {
       processInstanceBusinessKeysIn = new ArrayList<String>();
     }
 
@@ -530,7 +530,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery processInstanceBusinessKeyLike(String processInstanceBusinessKey) {
-    if (processInstanceBusinessKeysLike == null) {
+    ensureNotNull("Task processInstanceBusinessKey", processInstanceBusinessKey);
+    if (processInstanceBusinessKeysLike == null || logicalExpression == LogicalExpressionEnum.and) {
       processInstanceBusinessKeysLike = new ArrayList<String>();
     }
 
@@ -541,7 +542,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQueryImpl executionId(String executionId) {
-    if (executionIds == null) {
+    ensureNotNull("Task executionId", executionId);
+    if (executionIds == null || logicalExpression == LogicalExpressionEnum.and) {
       executionIds = new ArrayList<String>();
     }
 
@@ -552,7 +554,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery activityInstanceIdIn(String... activityInstanceIds) {
-    if (activityInstanceIds == null) {
+    ensureNotNull("Task activityInstanceIds", (Object[]) activityInstanceIds);
+    if (this.activityInstanceIds == null || logicalExpression == LogicalExpressionEnum.and) {
       this.activityInstanceIds = new ArrayList<String>();
     }
 
@@ -564,7 +567,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery tenantIdIn(String... tenantIds) {
     ensureNotNull("tenantIds", (Object[]) tenantIds);
-    if (this.tenantIds == null) {
+    if (this.tenantIds == null || logicalExpression == LogicalExpressionEnum.and) {
       this.tenantIds = new ArrayList<String>();
     }
 
@@ -582,7 +585,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQueryImpl taskCreatedOn(Date createTime) {
-    if (createTimes == null) {
+    ensureNotNull("Task createTime", createTime);
+    if (createTimes == null || logicalExpression == LogicalExpressionEnum.and) {
       createTimes = new ArrayList<Date>();
     }
 
@@ -626,7 +630,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery taskDefinitionKey(String key) {
-    if (keys == null) {
+    ensureNotNull("Task key", key);
+    if (keys == null || logicalExpression == LogicalExpressionEnum.and) {
       keys = new ArrayList<String>();
     }
 
@@ -637,7 +642,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery taskDefinitionKeyLike(String keyLike) {
-    if (keysLike == null) {
+    ensureNotNull("Task keyLike", keyLike);
+    if (keysLike == null || logicalExpression == LogicalExpressionEnum.and) {
       keysLike = new ArrayList<String>();
     }
 
@@ -648,7 +654,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery taskDefinitionKeyIn(String... taskDefinitionKeys) {
-    if (this.taskDefinitionKeys == null) {
+    if (this.taskDefinitionKeys == null || logicalExpression == LogicalExpressionEnum.and) {
       this.taskDefinitionKeys = new ArrayList<String>();
     }
 
@@ -659,7 +665,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery taskParentTaskId(String taskParentTaskId) {
-    if (parentTaskIds == null) {
+    ensureNotNull("Task taskParentTaskId", taskParentTaskId);
+    if (parentTaskIds == null || logicalExpression == LogicalExpressionEnum.and) {
       parentTaskIds = new ArrayList<String>();
     }
 
@@ -671,8 +678,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery caseInstanceId(String caseInstanceId) {
     ensureNotNull("caseInstanceId", caseInstanceId);
-
-    if (caseInstanceIds == null) {
+    if (caseInstanceIds == null || logicalExpression == LogicalExpressionEnum.and) {
       caseInstanceIds = new ArrayList<String>();
     }
 
@@ -684,8 +690,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery caseInstanceBusinessKey(String caseInstanceBusinessKey) {
     ensureNotNull("caseInstanceBusinessKey", caseInstanceBusinessKey);
-
-    if (caseInstanceBusinessKeys == null) {
+    if (caseInstanceBusinessKeys == null || logicalExpression == LogicalExpressionEnum.and) {
       caseInstanceBusinessKeys = new ArrayList<String>();
     }
 
@@ -697,8 +702,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery caseInstanceBusinessKeyLike(String caseInstanceBusinessKeyLike) {
     ensureNotNull("caseInstanceBusinessKeyLike", caseInstanceBusinessKeyLike);
-
-    if (caseInstanceBusinessKeysLike == null) {
+    if (caseInstanceBusinessKeysLike == null || logicalExpression == LogicalExpressionEnum.and) {
       caseInstanceBusinessKeysLike = new ArrayList<String>();
     }
 
@@ -710,8 +714,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery caseExecutionId(String caseExecutionId) {
     ensureNotNull("caseExecutionId", caseExecutionId);
-
-    if (caseExecutionIds == null) {
+    if (caseExecutionIds == null || logicalExpression == LogicalExpressionEnum.and) {
       caseExecutionIds = new ArrayList<String>();
     }
 
@@ -723,8 +726,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery caseDefinitionId(String caseDefinitionId) {
     ensureNotNull("caseDefinitionId", caseDefinitionId);
-
-    if (caseDefinitionIds == null) {
+    if (caseDefinitionIds == null || logicalExpression == LogicalExpressionEnum.and) {
       caseDefinitionIds = new ArrayList<String>();
     }
 
@@ -736,8 +738,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery caseDefinitionKey(String caseDefinitionKey) {
     ensureNotNull("caseDefinitionKey", caseDefinitionKey);
-
-    if (caseDefinitionKeys == null) {
+    if (caseDefinitionKeys == null || logicalExpression == LogicalExpressionEnum.and) {
       caseDefinitionKeys = new ArrayList<String>();
     }
 
@@ -749,8 +750,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery caseDefinitionName(String caseDefinitionName) {
     ensureNotNull("caseDefinitionName", caseDefinitionName);
-
-    if (caseDefinitionNames == null) {
+    if (caseDefinitionNames == null || logicalExpression == LogicalExpressionEnum.and) {
       caseDefinitionNames = new ArrayList<String>();
     }
 
@@ -762,8 +762,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery caseDefinitionNameLike(String caseDefinitionNameLike) {
     ensureNotNull("caseDefinitionNameLike", caseDefinitionNameLike);
-
-    if (caseDefinitionNamesLike == null) {
+    if (caseDefinitionNamesLike == null || logicalExpression == LogicalExpressionEnum.and) {
       caseDefinitionNamesLike = new ArrayList<String>();
     }
 
@@ -787,31 +786,31 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery taskVariableValueLike(String variableName, String variableValue) {
     addVariable(variableName, variableValue, QueryOperator.LIKE, true, false);
-  	return this;
+    return this;
   }
 
   @Override
   public TaskQuery taskVariableValueGreaterThan(String variableName, Object variableValue) {
     addVariable(variableName, variableValue, QueryOperator.GREATER_THAN, true, false);
-  	return this;
+    return this;
   }
 
   @Override
   public TaskQuery taskVariableValueGreaterThanOrEquals(String variableName, Object variableValue) {
     addVariable(variableName, variableValue, QueryOperator.GREATER_THAN_OR_EQUAL, true, false);
-  	return this;
+    return this;
   }
 
   @Override
   public TaskQuery taskVariableValueLessThan(String variableName, Object variableValue) {
     addVariable(variableName, variableValue, QueryOperator.LESS_THAN, true, false);
-  	return this;
+    return this;
   }
 
   @Override
   public TaskQuery taskVariableValueLessThanOrEquals(String variableName, Object variableValue) {
     addVariable(variableName, variableValue, QueryOperator.LESS_THAN_OR_EQUAL, true, false);
-  	return this;
+    return this;
   }
 
   @Override
@@ -829,31 +828,31 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery processVariableValueLike(String variableName, String variableValue) {
     addVariable(variableName, variableValue, QueryOperator.LIKE, false, true);
-  	return this;
+    return this;
   }
 
   @Override
   public TaskQuery processVariableValueGreaterThan(String variableName, Object variableValue) {
     addVariable(variableName, variableValue, QueryOperator.GREATER_THAN, false, true);
-  	return this;
+    return this;
   }
 
   @Override
   public TaskQuery processVariableValueGreaterThanOrEquals(String variableName, Object variableValue) {
     addVariable(variableName, variableValue, QueryOperator.GREATER_THAN_OR_EQUAL, false, true);
-  	return this;
+    return this;
   }
 
   @Override
   public TaskQuery processVariableValueLessThan(String variableName, Object variableValue) {
     addVariable(variableName, variableValue, QueryOperator.LESS_THAN, false, true);
-  	return this;
+    return this;
   }
 
   @Override
   public TaskQuery processVariableValueLessThanOrEquals(String variableName, Object variableValue) {
     addVariable(variableName, variableValue, QueryOperator.LESS_THAN_OR_EQUAL, false, true);
-  	return this;
+    return this;
   }
 
   @Override
@@ -900,7 +899,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery processDefinitionKey(String processDefinitionKey) {
-    if (processDefinitionKeys == null) {
+    ensureNotNull("Task processDefinitionKey", processDefinitionKey);
+    if (processDefinitionKeys == null || logicalExpression == LogicalExpressionEnum.and) {
       processDefinitionKeys = new ArrayList<String>();
     }
 
@@ -911,7 +911,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery processDefinitionKeyIn(String... processDefinitionKeysIn) {
-    if (this.processDefinitionKeysIn == null) {
+    if (this.processDefinitionKeysIn == null || logicalExpression == LogicalExpressionEnum.and) {
       this.processDefinitionKeysIn = new ArrayList<String>();
     }
 
@@ -922,7 +922,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery processDefinitionId(String processDefinitionId) {
-    if (processDefinitionIds == null) {
+    ensureNotNull("Task processDefinitionId", processDefinitionId);
+    if (processDefinitionIds == null || logicalExpression == LogicalExpressionEnum.and) {
       processDefinitionIds = new ArrayList<String>();
     }
 
@@ -933,7 +934,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery processDefinitionName(String processDefinitionName) {
-    if (processDefinitionNames == null) {
+    ensureNotNull("Task processDefinitionName", processDefinitionName);
+    if (processDefinitionNames == null || logicalExpression == LogicalExpressionEnum.and) {
       processDefinitionNames = new ArrayList<String>();
     }
 
@@ -944,7 +946,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery processDefinitionNameLike(String processDefinitionNameLike) {
-    if (processDefinitionNamesLike == null) {
+    ensureNotNull("Task processDefinitionNameLike", processDefinitionNameLike);
+    if (processDefinitionNamesLike == null || logicalExpression == LogicalExpressionEnum.and) {
       processDefinitionNamesLike = new ArrayList<String>();
     }
 
@@ -955,7 +958,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery dueDate(Date dueDate) {
-    if (dueDates == null) {
+    ensureNotNull("Task dueDate", dueDate);
+    if (dueDates == null || logicalExpression == LogicalExpressionEnum.and) {
       dueDates = new ArrayList<Date>();
     }
 
@@ -999,7 +1003,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery followUpDate(Date followUpDate) {
-    if (followUpDates == null) {
+    ensureNotNull("Task followUpDate", followUpDate);
+    if (followUpDates == null || logicalExpression == LogicalExpressionEnum.and) {
       followUpDates = new ArrayList<Date>();
     }
 
@@ -1070,7 +1075,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery active() {
-    if (suspensionStates == null) {
+    if (suspensionStates == null || logicalExpression == LogicalExpressionEnum.and) {
       suspensionStates = new ArrayList<SuspensionState>();
     }
 
@@ -1081,7 +1086,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery suspended() {
-    if (suspensionStates == null) {
+    if (suspensionStates == null || logicalExpression == LogicalExpressionEnum.and) {
       suspensionStates = new ArrayList<SuspensionState>();
     }
 
@@ -1114,15 +1119,12 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public List<String> getCandidateGroups() {
-    if (candidateGroup!=null) {
-      ArrayList result = new ArrayList();
-      result.add(candidateGroup);
-      return result;
-    } else if (candidateUser != null) {
-      return getGroupsForCandidateUser(candidateUser);
-    } else if(candidateGroups != null) {
+    if (candidateGroups!=null) {
       return candidateGroups;
+    } else if (candidateUsers != null) {
+      return getGroupsForCandidateUser(candidateUsers.get(0));
     }
+
     return null;
   }
 
@@ -1199,18 +1201,18 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
     if(value == null || isBoolean(value)) {
       // Null-values and booleans can only be used in EQUALS and NOT_EQUALS
       switch(operator) {
-      case GREATER_THAN:
-        throw new ProcessEngineException("Booleans and null cannot be used in 'greater than' condition");
-      case LESS_THAN:
-        throw new ProcessEngineException("Booleans and null cannot be used in 'less than' condition");
-      case GREATER_THAN_OR_EQUAL:
-        throw new ProcessEngineException("Booleans and null cannot be used in 'greater than or equal' condition");
-      case LESS_THAN_OR_EQUAL:
-        throw new ProcessEngineException("Booleans and null cannot be used in 'less than or equal' condition");
-      case LIKE:
-        throw new ProcessEngineException("Booleans and null cannot be used in 'like' condition");
-      default:
-        break;
+        case GREATER_THAN:
+          throw new ProcessEngineException("Booleans and null cannot be used in 'greater than' condition");
+        case LESS_THAN:
+          throw new ProcessEngineException("Booleans and null cannot be used in 'less than' condition");
+        case GREATER_THAN_OR_EQUAL:
+          throw new ProcessEngineException("Booleans and null cannot be used in 'greater than or equal' condition");
+        case LESS_THAN_OR_EQUAL:
+          throw new ProcessEngineException("Booleans and null cannot be used in 'less than or equal' condition");
+        case LIKE:
+          throw new ProcessEngineException("Booleans and null cannot be used in 'like' condition");
+        default:
+          break;
       }
     }
     addVariable(new TaskQueryVariableValue(name, value, operator, isTaskVariable, isProcessInstanceVariable));
@@ -1221,11 +1223,11 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   private boolean isBoolean(Object value) {
-  	if (value == null) {
-  	  return false;
-  	}
-  	return Boolean.class.isAssignableFrom(value.getClass()) || boolean.class.isAssignableFrom(value.getClass());
-	}
+    if (value == null) {
+      return false;
+    }
+    return Boolean.class.isAssignableFrom(value.getClass()) || boolean.class.isAssignableFrom(value.getClass());
+  }
 
   //ordering ////////////////////////////////////////////////////////////////
 
@@ -1488,66 +1490,66 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   //getters ////////////////////////////////////////////////////////////////
 
   public String getName() {
-    return names == null ? null : names.get(names.size()-1);
+    return names == null ? null : names.get(0);
   }
 
-  public ArrayList<String> getNames() {
+  public List<String> getNames() {
     return names;
   }
 
   public String getNameNotEqual() {
-    return namesNotEqual == null ? null : namesNotEqual.get(namesNotEqual.size()-1);
+    return namesNotEqual == null ? null : namesNotEqual.get(0);
   }
 
-  public ArrayList<String> getNamesNotEqual() {
+  public List<String> getNamesNotEqual() {
     return namesNotEqual;
   }
 
   public String getNameLike() {
-    return namesLike == null ? null : namesLike.get(namesLike.size()-1);
+    return namesLike == null ? null : namesLike.get(0);
   }
 
-  public ArrayList<String> getNamesLike() {
+  public List<String> getNamesLike() {
     return namesLike;
   }
 
   public String getNameNotLike() {
-    return namesNotLike == null ? null : namesNotLike.get(namesNotLike.size()-1);
+    return namesNotLike == null ? null : namesNotLike.get(0);
   }
 
-  public ArrayList<String> getNamesNotLike() {
+  public List<String> getNamesNotLike() {
     return namesNotLike;
   }
 
   public String getAssignee() {
-    return assignees == null ? null : assignees.get(assignees.size()-1);
+    return assignees == null ? null : assignees.get(0);
   }
 
-  public ArrayList<String> getAssignees() {
+  public List<String> getAssignees() {
     return assignees;
   }
 
   public String getAssigneeLike() {
-    return assigneesLike == null ? null : assigneesLike.get(assigneesLike.size()-1);
+    return assigneesLike == null ? null : assigneesLike.get(0);
   }
 
-  public ArrayList<String> getAssigneesLike() {
+  public List<String> getAssigneesLike() {
     return assigneesLike;
   }
 
   public String getInvolvedUser() {
-    return involvedUsers == null ? null : involvedUsers.get(involvedUsers.size()-1);
+    return involvedUsers == null ? null : involvedUsers.get(0);
   }
 
-  public ArrayList<String> getInvolvedUsers() {
+  public List<String> getInvolvedUsers() {
     return involvedUsers;
   }
 
   public String getOwner() {
-    return owners == null ? null : owners.get(owners.size()-1);
+    return owners == null ? null : owners.get(0);
   }
 
-  public ArrayList<String> getOwners() {
+  public List<String> getOwners() {
     return owners;
   }
 
@@ -1568,35 +1570,35 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public DelegationState getDelegationState() {
-    return delegationStates == null || delegationStates.isEmpty() ? null : delegationStates.get(delegationStates.size()-1);
+    return delegationStates == null ? null : delegationStates.get(0);
   }
 
-  public ArrayList<DelegationState> getDelegationStates() {
+  public List<DelegationState> getDelegationStates() {
     return delegationStates;
   }
 
   public boolean isNoDelegationState() {
-    if (delegationStates != null) {
-      for (DelegationState delegationState : delegationStates) {
-        if (delegationState == null) {
-          return true;
-        }
-      }
+    if (delegationStates != null && delegationStates.isEmpty() || delegationStates != null && logicalExpression == LogicalExpressionEnum.or) {
+      return true;
     }
 
     return false;
   }
 
   public String getDelegationStateString() {
-    return delegationStates == null ? null : delegationStates.get(delegationStates.size()-1).toString();
+    return delegationStates == null ? null : delegationStates.get(0).toString();
   }
 
   public String getCandidateUser() {
-    return candidateUser;
+    return candidateUsers == null ? null : candidateUsers.get(0);
+  }
+
+  public  List<String> getCandidateUsers() {
+    return candidateUsers;
   }
 
   public String getCandidateGroup() {
-    return candidateGroup;
+    return candidateGroups == null ? null : candidateGroups.get(0);
   }
 
   public boolean isIncludeAssignedTasks() {
@@ -1608,18 +1610,18 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String getProcessInstanceId() {
-    return processInstanceIds == null ? null : processInstanceIds.get(processInstanceIds.size()-1);
+    return processInstanceIds == null ? null : processInstanceIds.get(0);
   }
 
-  public ArrayList<String> getProcessInstanceIds() {
+  public List<String> getProcessInstanceIds() {
     return processInstanceIds;
   }
 
   public String getExecutionId() {
-    return executionIds == null ? null : executionIds.get(executionIds.size()-1);
+    return executionIds == null ? null : executionIds.get(0);
   }
 
-  public ArrayList<String> getExecutionIds() {
+  public List<String> getExecutionIds() {
     return executionIds;
   }
 
@@ -1627,7 +1629,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
     return activityInstanceIds == null ? null : activityInstanceIds.toArray(new String[0]);
   }
 
-  public ArrayList<String> getActivityInstanceIdsIn() {
+  public List<String> getActivityInstanceIdsIn() {
     return activityInstanceIds;
   }
 
@@ -1636,34 +1638,34 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String getTaskId() {
-    return taskIds == null ? null : taskIds.get(taskIds.size()-1);
+    return taskIds == null ? null : taskIds.get(0);
   }
 
-  public ArrayList<String> getTaskIds() {
+  public List<String> getTaskIds() {
     return taskIds;
   }
 
   public String getDescription() {
-    return descriptions == null ? null : descriptions.get(descriptions.size()-1);
+    return descriptions == null ? null : descriptions.get(0);
   }
 
-  public ArrayList<String> getDescriptions() {
+  public List<String> getDescriptions() {
     return descriptions;
   }
 
   public String getDescriptionLike() {
-    return descriptionsLike == null ? null : descriptionsLike.get(descriptionsLike.size()-1);
+    return descriptionsLike == null ? null : descriptionsLike.get(0);
   }
 
-  public ArrayList<String> getDescriptionsLike() {
+  public List<String> getDescriptionsLike() {
     return descriptionsLike;
   }
 
   public Integer getPriority() {
-    return priorities == null ? null : priorities.get(priorities.size()-1);
+    return priorities == null ? null : priorities.get(0);
   }
 
-  public ArrayList<Integer> getPriorities() {
+  public List<Integer> getPriorities() {
     return priorities;
   }
 
@@ -1676,10 +1678,10 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public Date getCreateTime() {
-    return createTimes == null ? null : createTimes.get(createTimes.size()-1);
+    return createTimes == null ? null : createTimes.get(0);
   }
 
-  public ArrayList<Date> getCreateTimes() {
+  public List<Date> getCreateTimes() {
     return createTimes;
   }
 
@@ -1692,30 +1694,30 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String getKey() {
-    return keys == null ? null : keys.get(keys.size()-1);
+    return keys == null ? null : keys.get(0);
   }
 
   public String[] getKeys() {
     return taskDefinitionKeys == null ? null : taskDefinitionKeys.toArray(new String[0]);
   }
 
-  public ArrayList<String> getKeysOr() {
+  public List<String> getKeysOr() {
     return keys;
   }
 
   public String getKeyLike() {
-    return keysLike == null ? null : keysLike.get(keysLike.size()-1);
+    return keysLike == null ? null : keysLike.get(0);
   }
 
-  public ArrayList<String> getKeysLike() {
+  public List<String> getKeysLike() {
     return keysLike;
   }
 
   public String getParentTaskId() {
-    return parentTaskIds == null ? null : parentTaskIds.get(parentTaskIds.size()-1);
+    return parentTaskIds == null ? null : parentTaskIds.get(0);
   }
 
-  public ArrayList<String> getParentTaskIds() {
+  public List<String> getParentTaskIds() {
     return parentTaskIds;
   }
 
@@ -1724,10 +1726,10 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String getProcessDefinitionKey() {
-    return processDefinitionKeys == null ? null : processDefinitionKeys.get(processDefinitionKeys.size()-1);
+    return processDefinitionKeys == null ? null : processDefinitionKeys.get(0);
   }
 
-  public ArrayList<String> getProcessDefinitionKeysOr() {
+  public List<String> getProcessDefinitionKeysOr() {
     return processDefinitionKeys;
   }
 
@@ -1736,34 +1738,34 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String getProcessDefinitionId() {
-    return processDefinitionIds == null ? null : processDefinitionIds.get(processDefinitionIds.size()-1);
+    return processDefinitionIds == null ? null : processDefinitionIds.get(0);
   }
 
-  public ArrayList<String> getProcessDefinitionIds() {
+  public List<String> getProcessDefinitionIds() {
     return processDefinitionIds;
   }
 
   public String getProcessDefinitionName() {
-    return processDefinitionNames == null ? null : processDefinitionNames.get(processDefinitionNames.size()-1);
+    return processDefinitionNames == null ? null : processDefinitionNames.get(0);
   }
 
-  public ArrayList<String> getProcessDefinitionNames() {
+  public List<String> getProcessDefinitionNames() {
     return processDefinitionNames;
   }
 
   public String getProcessDefinitionNameLike() {
-    return processDefinitionNamesLike == null ? null : processDefinitionNamesLike.get(processDefinitionNamesLike.size()-1);
+    return processDefinitionNamesLike == null ? null : processDefinitionNamesLike.get(0);
   }
 
-  public ArrayList<String> getProcessDefinitionNamesLike() {
+  public List<String> getProcessDefinitionNamesLike() {
     return processDefinitionNamesLike;
   }
 
   public String getProcessInstanceBusinessKey() {
-    return processInstanceBusinessKeys == null ? null : processInstanceBusinessKeys.get(processInstanceBusinessKeys.size()-1);
+    return processInstanceBusinessKeys == null ? null : processInstanceBusinessKeys.get(0);
   }
 
-  public ArrayList<String> getProcessInstanceBusinessKeysOr() {
+  public List<String> getProcessInstanceBusinessKeysOr() {
     return processInstanceBusinessKeys;
   }
 
@@ -1772,18 +1774,18 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public String getProcessInstanceBusinessKeyLike() {
-    return processInstanceBusinessKeysLike == null ? null : processInstanceBusinessKeysLike.get(processInstanceBusinessKeysLike.size()-1);
+    return processInstanceBusinessKeysLike == null ? null : processInstanceBusinessKeysLike.get(0);
   }
 
-  public ArrayList<String> getProcessInstanceBusinessKeysLike() {
+  public List<String> getProcessInstanceBusinessKeysLike() {
     return processInstanceBusinessKeysLike;
   }
 
   public Date getDueDate() {
-    return dueDates == null ? null : dueDates.get(dueDates.size()-1);
+    return dueDates == null ? null : dueDates.get(0);
   }
 
-  public ArrayList<Date> getDueDates() {
+  public List<Date> getDueDates() {
     return dueDates;
   }
 
@@ -1796,10 +1798,10 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public Date getFollowUpDate() {
-    return followUpDates == null ? null : followUpDates.get(followUpDates.size()-1);
+    return followUpDates == null ? null : followUpDates.get(0);
   }
 
-  public ArrayList<Date> getFollowUpDates() {
+  public List<Date> getFollowUpDates() {
     return followUpDates;
   }
 
@@ -1816,74 +1818,74 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   }
 
   public SuspensionState getSuspensionState() {
-    return suspensionStates == null ? null : suspensionStates.get(suspensionStates.size()-1);
+    return suspensionStates == null ? null : suspensionStates.get(0);
   }
 
-  public ArrayList<SuspensionState> getSuspensionStates() {
+  public List<SuspensionState> getSuspensionStates() {
     return suspensionStates;
   }
 
   public String getCaseInstanceId() {
-    return caseInstanceIds == null ? null : caseInstanceIds.get(caseInstanceIds.size()-1);
+    return caseInstanceIds == null ? null : caseInstanceIds.get(0);
   }
 
-  public ArrayList<String> getCaseInstanceIds() {
+  public List<String> getCaseInstanceIds() {
     return caseInstanceIds;
   }
 
   public String getCaseInstanceBusinessKey() {
-    return caseInstanceBusinessKeys == null ? null : caseInstanceBusinessKeys.get(caseInstanceBusinessKeys.size()-1);
+    return caseInstanceBusinessKeys == null ? null : caseInstanceBusinessKeys.get(0);
   }
 
-  public ArrayList<String> getCaseInstanceBusinessKeys() {
+  public List<String> getCaseInstanceBusinessKeys() {
     return caseInstanceBusinessKeys;
   }
 
   public String getCaseInstanceBusinessKeyLike() {
-    return caseInstanceBusinessKeysLike == null ? null : caseInstanceBusinessKeysLike.get(caseInstanceBusinessKeysLike.size()-1);
+    return caseInstanceBusinessKeysLike == null ? null : caseInstanceBusinessKeysLike.get(0);
   }
 
-  public ArrayList<String> getCaseInstanceBusinessKeysLike() {
+  public List<String> getCaseInstanceBusinessKeysLike() {
     return caseInstanceBusinessKeysLike;
   }
 
   public String getCaseExecutionId() {
-    return caseExecutionIds == null ? null : caseExecutionIds.get(caseExecutionIds.size()-1);
+    return caseExecutionIds == null ? null : caseExecutionIds.get(0);
   }
 
-  public ArrayList<String> getCaseExecutionIds() {
+  public List<String> getCaseExecutionIds() {
     return caseExecutionIds;
   }
 
   public String getCaseDefinitionId() {
-    return caseDefinitionIds == null ? null : caseDefinitionIds.get(caseDefinitionIds.size()-1);
+    return caseDefinitionIds == null ? null : caseDefinitionIds.get(0);
   }
 
-  public ArrayList<String> getCaseDefinitionIds() {
+  public List<String> getCaseDefinitionIds() {
     return caseDefinitionIds;
   }
 
   public String getCaseDefinitionKey() {
-    return caseDefinitionKeys == null ? null : caseDefinitionKeys.get(caseDefinitionKeys.size()-1);
+    return caseDefinitionKeys == null ? null : caseDefinitionKeys.get(0);
   }
 
-  public ArrayList<String> getCaseDefinitionKeys() {
+  public List<String> getCaseDefinitionKeys() {
     return caseDefinitionKeys;
   }
 
   public String getCaseDefinitionName() {
-    return caseDefinitionNames == null ? null : caseDefinitionNames.get(caseDefinitionNames.size()-1);
+    return caseDefinitionNames == null ? null : caseDefinitionNames.get(0);
   }
 
-  public ArrayList<String> getCaseDefinitionNames() {
+  public List<String> getCaseDefinitionNames() {
     return caseDefinitionNames;
   }
 
   public String getCaseDefinitionNameLike() {
-    return caseDefinitionNamesLike == null ? null : caseDefinitionNamesLike.get(caseDefinitionNamesLike.size()-1);
+    return caseDefinitionNamesLike == null ? null : caseDefinitionNamesLike.get(0);
   }
 
-  public ArrayList<String> getCaseDefinitionNamesLike() {
+  public List<String> getCaseDefinitionNamesLike() {
     return caseDefinitionNamesLike;
   }
 
@@ -1901,6 +1903,10 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   public String getLogicalExpression() {
     return logicalExpression.toString();
+  }
+
+  public LogicalExpressionEnum getParentLogicalExpression() {
+    return parentLogicalExpressionQuery == null ? null : parentLogicalExpressionQuery.logicalExpression;
   }
 
   public List<TaskQueryImpl> getLogicalExpressionQueryChildren() {
@@ -2391,8 +2397,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
       TaskQueryVariableValue other = ((TaskQueryVariableValueComparable) o).getVariableValue();
 
       return variableValue.getName().equals(other.getName())
-             && variableValue.isProcessInstanceVariable() == other.isProcessInstanceVariable()
-             && variableValue.isLocal() == other.isLocal();
+        && variableValue.isProcessInstanceVariable() == other.isProcessInstanceVariable()
+        && variableValue.isLocal() == other.isLocal();
     }
 
     @Override
@@ -2411,7 +2417,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery taskNameNotEqual(String name) {
-    if (namesNotEqual == null) {
+    ensureNotNull("Task name", name);
+    if (namesNotEqual == null || logicalExpression == LogicalExpressionEnum.and) {
       namesNotEqual = new ArrayList<String>();
     }
 
@@ -2423,7 +2430,7 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   @Override
   public TaskQuery taskNameNotLike(String nameNotLike) {
     ensureNotNull("Task nameNotLike", nameNotLike);
-    if (namesNotLike == null) {
+    if (namesNotLike == null || logicalExpression == LogicalExpressionEnum.and) {
       namesNotLike = new ArrayList<String>();
     }
 
@@ -2434,17 +2441,17 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery startAnd() {
-    return openLogicalOperator(logicalExpressionEnum.and);
+    return openLogicalOperator(LogicalExpressionEnum.and);
   }
 
   @Override
   public TaskQuery startOr() {
-    return openLogicalOperator(logicalExpressionEnum.or);
+    return openLogicalOperator(LogicalExpressionEnum.or);
   }
 
   @Override
   public TaskQuery endAnd() {
-    if (parentLogicalExpressionQuery == null || logicalExpression == logicalExpressionEnum.or) {
+    if (parentLogicalExpressionQuery == null || logicalExpression == LogicalExpressionEnum.or) {
       throw new ProcessEngineException("'endAnd()' is only allowed after invocation of 'startAnd()'");
     }
 
@@ -2453,14 +2460,14 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
 
   @Override
   public TaskQuery endOr() {
-    if (parentLogicalExpressionQuery == null || logicalExpression == logicalExpressionEnum.and) {
-      //throw new ProcessEngineException("'endOr()' is only allowed after invocation of 'startOr()'");
+    if (parentLogicalExpressionQuery == null || logicalExpression == LogicalExpressionEnum.and) {
+      throw new ProcessEngineException("'endOr()' is only allowed after invocation of 'startOr()'");
     }
 
     return parentLogicalExpressionQuery;
   }
 
-  private TaskQuery openLogicalOperator(logicalExpressionEnum logicalExpression) {
+  private TaskQuery openLogicalOperator(LogicalExpressionEnum logicalExpression) {
     TaskQueryImpl queryInstance = new TaskQueryImpl(logicalExpression, this);
     logicalExpressionQueryChildren.add(queryInstance);
 

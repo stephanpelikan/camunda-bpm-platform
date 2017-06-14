@@ -230,13 +230,13 @@
     </foreach>
 
     <foreach collection="logicalExpressionQueryList" item="logicalExpressionQuery" index="i">
-      <if test="logicalExpressionQuery.candidateUser != null || logicalExpressionQuery.candidateGroups != null || logicalExpressionQuery.involvedUser != null
+      <if test="logicalExpressionQuery.candidateUsers != null || logicalExpressionQuery.candidateGroups != null || logicalExpressionQuery.involvedUser != null
       || logicalExpressionQuery.withCandidateGroups || logicalExpressionQuery.withCandidateUsers
       || logicalExpressionQuery.withoutCandidateGroups || logicalExpressionQuery.withoutCandidateUsers">
         <choose>
           <when test="(logicalExpressionQuery.withCandidateUsers || logicalExpressionQuery.withoutCandidateUsers)
             &amp;&amp; (logicalExpressionQuery.assigned || logicalExpressionQuery.unassigned)">left</when>
-          <otherwise>inner</otherwise>
+          <otherwise>left</otherwise>
         </choose>
         join ${prefix}ACT_RU_IDENTITYLINK I_${i} on I_${i}.TASK_ID_ = RES.ID_
       </if>
@@ -267,99 +267,63 @@
     </foreach>
     <where>
       <bind name="closingParentheses" value="@org.camunda.bpm.engine.impl.db.sql.MyBatisTaskQueryHelper@closingParenthesesList(logicalExpressionQueryList)"/>
+      <trim suffixOverrides="and|or">
       <foreach collection="logicalExpressionQueryList" item="logicalExpressionQuery" index="i">
+        <if test="i > 0 &amp;&amp; closingParentheses.get(i-1) != null">
+          ${logicalExpressionQuery.parentLogicalExpression}
+        </if>
         <if test="logicalExpressionQueryList.size() > 1">(</if>
-        <trim prefix="" prefixOverrides="and|or">
-          <if test="logicalExpressionQuery.taskId != null">
+        <trim prefixOverrides="and|or">
+          <if test="logicalExpressionQuery.taskIds != null &amp;&amp; !logicalExpressionQuery.taskIds.isEmpty()">
             RES.ID_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.taskIds"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.taskIds.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.name != null">
+          <if test="logicalExpressionQuery.names != null &amp;&amp; !logicalExpressionQuery.names.isEmpty()">
             <!-- based on CAM-6363 compare name case insensitive -->
             ${logicalExpressionQuery.logicalExpression} UPPER(RES.NAME_) in
             <foreach item="item" index="index" collection="logicalExpressionQuery.names"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.names.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  UPPER(#{item})
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              UPPER(#{item})
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.nameNotEqual != null">
+          <if test="logicalExpressionQuery.namesNotEqual != null &amp;&amp; !logicalExpressionQuery.namesNotEqual.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} UPPER(RES.NAME_) not in
             <foreach item="item" index="index" collection="logicalExpressionQuery.namesNotEqual"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.namesNotEqual.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  UPPER(#{item})
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              UPPER(#{item})
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.nameLike != null">
+          <if test="logicalExpressionQuery.namesLike != null &amp;&amp; !logicalExpressionQuery.namesLike.isEmpty()">
             <!-- based on CAM-6165 compare name like case insensitive -->
             <foreach item="item" index="index" collection="logicalExpressionQuery.namesLike">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.namesLike.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  ${logicalExpressionQuery.logicalExpression} UPPER(RES.NAME_) like UPPER(#{item}) ESCAPE #{escapeChar}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              ${logicalExpressionQuery.logicalExpression} UPPER(RES.NAME_) like UPPER(#{item}) ESCAPE #{escapeChar}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.nameNotLike != null">
+          <if test="logicalExpressionQuery.namesNotLike != null &amp;&amp; !logicalExpressionQuery.namesNotLike.isEmpty()">
             <foreach item="item" index="index" collection="logicalExpressionQuery.namesNotLike">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.namesNotLike.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  ${logicalExpressionQuery.logicalExpression} UPPER(RES.NAME_) not like UPPER(#{item}) ESCAPE #{escapeChar}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              ${logicalExpressionQuery.logicalExpression} UPPER(RES.NAME_) not like UPPER(#{item}) ESCAPE #{escapeChar}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.description != null">
+          <if test="logicalExpressionQuery.descriptions != null &amp;&amp; !logicalExpressionQuery.descriptions.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.DESCRIPTION_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.descriptions"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.descriptions.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.descriptionLike != null">
+          <if test="logicalExpressionQuery.descriptionsLike != null &amp;&amp; !logicalExpressionQuery.descriptionsLike.isEmpty()">
             <foreach item="item" index="index" collection="logicalExpressionQuery.descriptionsLike">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.descriptionsLike.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  ${logicalExpressionQuery.logicalExpression} RES.DESCRIPTION_ like #{item} ESCAPE #{escapeChar}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              ${logicalExpressionQuery.logicalExpression} RES.DESCRIPTION_ like #{item} ESCAPE #{escapeChar}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.priority != null">
+          <if test="logicalExpressionQuery.priorities != null &amp;&amp; !logicalExpressionQuery.priorities.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.PRIORITY_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.priorities"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.priorities.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
           <if test="logicalExpressionQuery.minPriority != null">
@@ -368,38 +332,23 @@
           <if test="logicalExpressionQuery.maxPriority != null">
             ${logicalExpressionQuery.logicalExpression} RES.PRIORITY_ &lt;= #{logicalExpressionQuery.maxPriority}
           </if>
-          <if test="logicalExpressionQuery.assignee != null">
+          <if test="logicalExpressionQuery.assignees != null &amp;&amp; !logicalExpressionQuery.assignees.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.ASSIGNEE_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.assignees"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.assignees.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.assigneeLike != null">
+          <if test="logicalExpressionQuery.assigneesLike != null &amp;&amp; !logicalExpressionQuery.assigneesLike.isEmpty()">
             <foreach item="item" index="index" collection="logicalExpressionQuery.assigneesLike">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.assigneesLike.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  ${logicalExpressionQuery.logicalExpression} RES.ASSIGNEE_ like #{item} ESCAPE #{escapeChar}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              ${logicalExpressionQuery.logicalExpression} RES.ASSIGNEE_ like #{item} ESCAPE #{escapeChar}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.owner != null">
+          <if test="logicalExpressionQuery.owners != null &amp;&amp; !logicalExpressionQuery.owners.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.OWNER_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.owners"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.owners.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
           <if test="logicalExpressionQuery.unassigned">
@@ -411,41 +360,25 @@
           <if test="logicalExpressionQuery.noDelegationState">
             ${logicalExpressionQuery.logicalExpression} RES.DELEGATION_ IS NULL
           </if>
-          <if test="logicalExpressionQuery.delegationStates != null">
+          <if test="logicalExpressionQuery.delegationStates != null &amp;&amp; !logicalExpressionQuery.delegationStates.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.DELEGATION_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.delegationStates"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.delegationStates.size()-1 &amp;&amp; item != null
-                 || logicalExpressionQuery.logicalExpression == 'or' &amp;&amp; item != null">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.processInstanceId != null">
+          <if test="logicalExpressionQuery.processInstanceIds != null &amp;&amp; !logicalExpressionQuery.processInstanceIds.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.PROC_INST_ID_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.processInstanceIds"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.processInstanceIds.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.processInstanceBusinessKey != null">
+          <if test="logicalExpressionQuery.processInstanceBusinessKeysOr != null &amp;&amp; !logicalExpressionQuery.processInstanceBusinessKeysOr.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} E_${i}.BUSINESS_KEY_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.processInstanceBusinessKeysOr"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.processInstanceBusinessKeysOr.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
           <if test="logicalExpressionQuery.processInstanceBusinessKeys != null &amp;&amp; logicalExpressionQuery.processInstanceBusinessKeys.length > 0">
@@ -455,84 +388,49 @@
               #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.processInstanceBusinessKeyLike != null">
+          <if test="logicalExpressionQuery.processInstanceBusinessKeysLike != null &amp;&amp; !logicalExpressionQuery.processInstanceBusinessKeysLike.isEmpty()">
             <foreach item="item" index="index" collection="logicalExpressionQuery.processInstanceBusinessKeysLike">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.processInstanceBusinessKeysLike.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  ${logicalExpressionQuery.logicalExpression} E_${i}.BUSINESS_KEY_ like #{item} ESCAPE #{escapeChar}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              ${logicalExpressionQuery.logicalExpression} E_${i}.BUSINESS_KEY_ like #{item} ESCAPE #{escapeChar}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.executionId != null">
+          <if test="logicalExpressionQuery.executionIds != null &amp;&amp; !logicalExpressionQuery.executionIds.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.EXECUTION_ID_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.executionIds"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.executionIds.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.caseInstanceId != null">
+          <if test="logicalExpressionQuery.caseInstanceIds != null &amp;&amp; !logicalExpressionQuery.caseInstanceIds.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.CASE_INST_ID_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.caseInstanceIds"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.caseInstanceIds.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.caseInstanceBusinessKey != null">
+          <if test="logicalExpressionQuery.caseInstanceBusinessKeys != null &amp;&amp; !logicalExpressionQuery.caseInstanceBusinessKeys.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} CE_${i}.BUSINESS_KEY_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.caseInstanceBusinessKeys"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.caseInstanceBusinessKeys.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.caseInstanceBusinessKeyLike != null">
+          <if test="logicalExpressionQuery.caseInstanceBusinessKeysLike != null &amp;&amp; !logicalExpressionQuery.caseInstanceBusinessKeysLike.isEmpty()">
             <foreach item="item" index="index" collection="logicalExpressionQuery.caseInstanceBusinessKeysLike">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.caseInstanceBusinessKeysLike.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  ${logicalExpressionQuery.logicalExpression} CE_${i}.BUSINESS_KEY_ like #{item} ESCAPE #{escapeChar}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              ${logicalExpressionQuery.logicalExpression} CE_${i}.BUSINESS_KEY_ like #{item} ESCAPE #{escapeChar}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.caseExecutionId != null">
+          <if test="logicalExpressionQuery.caseExecutionIds != null &amp;&amp; !logicalExpressionQuery.caseExecutionIds.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.CASE_EXECUTION_ID_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.caseExecutionIds"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.caseExecutionIds.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.createTime != null">
+          <if test="logicalExpressionQuery.createTimes != null &amp;&amp; !logicalExpressionQuery.createTimes.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.CREATE_TIME_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.createTimes"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.createTimes.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
           <if test="logicalExpressionQuery.createTimeBefore != null">
@@ -541,38 +439,23 @@
           <if test="logicalExpressionQuery.createTimeAfter != null">
             ${logicalExpressionQuery.logicalExpression} RES.CREATE_TIME_ &gt; #{logicalExpressionQuery.createTimeAfter}
           </if>
-          <if test="logicalExpressionQuery.key != null">
+          <if test="logicalExpressionQuery.keysOr != null &amp;&amp; !logicalExpressionQuery.keysOr.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.TASK_DEF_KEY_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.keysOr"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.keysOr.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.keyLike != null">
+          <if test="logicalExpressionQuery.keysLike != null &amp;&amp; !logicalExpressionQuery.keysLike.isEmpty()">
             <foreach item="item" index="index" collection="logicalExpressionQuery.keysLike">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.keysLike.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  ${logicalExpressionQuery.logicalExpression} RES.TASK_DEF_KEY_ like #{item} ESCAPE #{escapeChar}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+                ${logicalExpressionQuery.logicalExpression} RES.TASK_DEF_KEY_ like #{item} ESCAPE #{escapeChar}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.parentTaskId != null">
+          <if test="logicalExpressionQuery.parentTaskIds != null &amp;&amp; !logicalExpressionQuery.parentTaskIds.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.PARENT_TASK_ID_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.parentTaskIds"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.parentTaskIds.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
           <if test="logicalExpressionQuery.keys != null &amp;&amp; logicalExpressionQuery.keys.length > 0">
@@ -582,28 +465,18 @@
               #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.processDefinitionId != null">
+          <if test="logicalExpressionQuery.processDefinitionIds != null &amp;&amp; !logicalExpressionQuery.processDefinitionId.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.PROC_DEF_ID_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.processDefinitionIds"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.processDefinitionIds.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.processDefinitionKey != null">
+          <if test="logicalExpressionQuery.processDefinitionKeysOr != null &amp;&amp; !logicalExpressionQuery.processDefinitionKeysOr.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} D_${i}.KEY_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.processDefinitionKeysOr"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.processDefinitionKeysOr.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
           <if test="logicalExpressionQuery.processDefinitionKeys != null &amp;&amp; logicalExpressionQuery.processDefinitionKeys.length > 0">
@@ -613,84 +486,49 @@
               #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.processDefinitionName != null">
+          <if test="logicalExpressionQuery.processDefinitionNames != null &amp;&amp; !logicalExpressionQuery.processDefinitionNames.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} D_${i}.NAME_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.processDefinitionNames"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.processDefinitionNames.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.processDefinitionNameLike != null">
+          <if test="logicalExpressionQuery.processDefinitionNamesLike != null &amp;&amp; !logicalExpressionQuery.processDefinitionNamesLike.isEmpty()">
             <foreach item="item" index="index" collection="logicalExpressionQuery.processDefinitionNamesLike">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.processDefinitionNamesLike.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  ${logicalExpressionQuery.logicalExpression} D_${i}.NAME_ like #{item} ESCAPE #{escapeChar}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              ${logicalExpressionQuery.logicalExpression} D_${i}.NAME_ like #{item} ESCAPE #{escapeChar}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.caseDefinitionId != null">
+          <if test="logicalExpressionQuery.caseDefinitionIds != null &amp;&amp; !logicalExpressionQuery.caseDefinitionIds.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.CASE_DEF_ID_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.caseDefinitionIds"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.caseDefinitionIds.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.caseDefinitionKey != null">
+          <if test="logicalExpressionQuery.caseDefinitionKeys != null &amp;&amp; !logicalExpressionQuery.caseDefinitionKeys.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} CD_${i}.KEY_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.caseDefinitionKeys"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.caseDefinitionKeys.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.caseDefinitionName != null">
+          <if test="logicalExpressionQuery.caseDefinitionNames != null &amp;&amp; !logicalExpressionQuery.caseDefinitionNames.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} CD_${i}.NAME_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.caseDefinitionNames"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.caseDefinitionNames.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.caseDefinitionNameLike != null">
+          <if test="logicalExpressionQuery.caseDefinitionNamesLike != null &amp;&amp; !logicalExpressionQuery.caseDefinitionNamesLike.isEmpty()">
             <foreach item="item" index="index" collection="logicalExpressionQuery.caseDefinitionNamesLike">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.caseDefinitionNamesLike.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  ${logicalExpressionQuery.logicalExpression} CD_${i}.NAME_ like #{item} ESCAPE #{escapeChar}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              ${logicalExpressionQuery.logicalExpression} CD_${i}.NAME_ like #{item} ESCAPE #{escapeChar}
             </foreach>
           </if>
-          <if test="logicalExpressionQuery.dueDate != null">
+          <if test="logicalExpressionQuery.dueDates != null &amp;&amp; !logicalExpressionQuery.dueDates.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.DUE_DATE_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.dueDates"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.dueDates.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
           <if test="logicalExpressionQuery.dueBefore != null">
@@ -702,16 +540,11 @@
           <if test="logicalExpressionQuery.dueDate != null || logicalExpressionQuery.dueBefore != null || logicalExpressionQuery.dueAfter != null">
             ${logicalExpressionQuery.logicalExpression} RES.DUE_DATE_ is not null
           </if>
-          <if test="logicalExpressionQuery.followUpDate != null">
+          <if test="logicalExpressionQuery.followUpDates != null &amp;&amp; !logicalExpressionQuery.followUpDates.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.FOLLOW_UP_DATE_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.followUpDates"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.followUpDates.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
           <if test="logicalExpressionQuery.followUpBefore != null &amp;&amp; !logicalExpressionQuery.followUpNullAccepted">
@@ -737,7 +570,6 @@
             </foreach>
           </if>
 
-          <!-- not tested yet due to missing testcases -->
           <if test="logicalExpressionQuery.isTenantIdSet()">
             <if test="logicalExpressionQuery.tenantIds != null &amp;&amp; logicalExpressionQuery.tenantIds.length > 0">
               ${logicalExpressionQuery.logicalExpression} RES.TENANT_ID_ in
@@ -751,20 +583,24 @@
             </if>
           </if>
 
-          <if test="logicalExpressionQuery.candidateUser != null || logicalExpressionQuery.candidateGroups != null || logicalExpressionQuery.withCandidateGroups || logicalExpressionQuery.withCandidateUsers">
+          <if test="logicalExpressionQuery.candidateUsers != null &amp;&amp; !logicalExpressionQuery.candidateUsers.isEmpty() || logicalExpressionQuery.candidateGroups != null &amp;&amp; !logicalExpressionQuery.candidateGroups.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} <trim prefix="(" suffix=")" prefixOverrides="and ">
             <if test="!logicalExpressionQuery.includeAssignedTasks">
               and RES.ASSIGNEE_ is null
             </if>
             and I_${i}.TYPE_ = 'candidate'
-            <if test="logicalExpressionQuery.candidateUser != null || logicalExpressionQuery.candidateGroups != null">
+            <if test="logicalExpressionQuery.candidateUsers != null || logicalExpressionQuery.candidateGroups != null">
               and
               (
-              <if test="logicalExpressionQuery.candidateUser != null">
-                I_${i}.USER_ID_ = #{logicalExpressionQuery.candidateUser}
+              <if test="logicalExpressionQuery.candidateUsers != null &amp;&amp; !logicalExpressionQuery.candidateUsers.isEmpty()">
+                I_${i}.USER_ID_ in
+                <foreach item="candidateUser" index="index" collection="logicalExpressionQuery.candidateUsers"
+                         open="(" separator="," close=")">
+                  #{candidateUser}
+                </foreach>
               </if>
-              <if test="logicalExpressionQuery.candidateGroups != null &amp;&amp; logicalExpressionQuery.candidateGroups.size() &gt; 0">
-                <if test="logicalExpressionQuery.candidateUser != null">
+              <if test="logicalExpressionQuery.candidateGroups != null &amp;&amp; !logicalExpressionQuery.candidateGroups.isEmpty()">
+                <if test="logicalExpressionQuery.candidateUsers != null">
                   or
                 </if>
                 I_${i}.GROUP_ID_ in
@@ -774,14 +610,6 @@
                 </foreach>
               </if>
               )
-            </if>
-
-            <if test="logicalExpressionQuery.withCandidateGroups">
-              and I_${i}.GROUP_ID_ is not null
-            </if>
-
-            <if test="logicalExpressionQuery.withCandidateUsers">
-              and I_${i}.USER_ID_ is not null
             </if>
           </trim>
           </if>
@@ -801,16 +629,26 @@
           </trim>
           </if>
 
-          <if test="logicalExpressionQuery.involvedUser != null">
+          <if test="logicalExpressionQuery.withCandidateGroups || logicalExpressionQuery.withCandidateUsers">
+            ${logicalExpressionQuery.logicalExpression} <trim prefix="(" suffix=")" prefixOverrides="and ">
+            <if test="!logicalExpressionQuery.includeAssignedTasks">
+              and RES.ASSIGNEE_ is null
+            </if>
+            and I_${i}.TYPE_ = 'candidate'
+            <if test="logicalExpressionQuery.withCandidateGroups">
+              and I_${i}.GROUP_ID_ is not null
+            </if>
+            <if test="logicalExpressionQuery.withCandidateUsers">
+              and I_${i}.USER_ID_ is not null
+            </if>
+          </trim>
+          </if>
+
+          <if test="logicalExpressionQuery.involvedUsers != null &amp;&amp; !logicalExpressionQuery.involvedUsers.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} I_${i}.USER_ID_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.involvedUsers"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.involvedUsers.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item}
             </foreach>
           </if>
 
@@ -848,26 +686,25 @@
             </trim>
           </foreach>
 
-          <if test="logicalExpressionQuery.suspensionState != null">
+          <if test="logicalExpressionQuery.suspensionStates != null &amp;&amp; !logicalExpressionQuery.suspensionStates.isEmpty()">
             ${logicalExpressionQuery.logicalExpression} RES.SUSPENSION_STATE_ in
             <foreach item="item" index="index" collection="logicalExpressionQuery.suspensionStates"
                      open="(" separator="," close=")">
-              <choose>
-                <when test="logicalExpressionQuery.logicalExpression == 'and' &amp;&amp; index == logicalExpressionQuery.suspensionStates.size()-1 || logicalExpressionQuery.logicalExpression == 'or'">
-                  #{item.stateCode}
-                </when>
-                <otherwise></otherwise>
-              </choose>
+              #{item.stateCode}
             </foreach>
           </if>
 
-          ${closingParentheses.get(i)}
-          <if test="i != logicalExpressionQueryList.size()-1">
-            ${logicalExpressionQuery.logicalExpression}
-          </if>
+          <choose>
+            <when test="closingParentheses.get(i) != null">
+              ${closingParentheses.get(i)}
+            </when>
+            <otherwise>
+              ${logicalExpressionQuery.logicalExpression}
+            </otherwise>
+          </choose>
         </trim>
       </foreach>
-
+      </trim>
       <!-- todo: research if this makes actually sense -->
       <include refid="org.camunda.bpm.engine.impl.persistence.entity.AuthorizationEntity.contextualAuthorizationCheck" />
       <!-- todo: research if this makes actually sense -->

@@ -10,18 +10,14 @@ import java.util.List;
  * Created by tasso on 31.05.17.
  */
 public class MyBatisTaskQueryHelper {
-  private static List<TaskQueryImpl> processedQueries;
-  private static int closingParenthesesCounter;
-  private static boolean expressionClosed;
-  private static List<Integer> closingParenthesesCounterList;
-
   public static List<String> closingParenthesesList(List<TaskQueryImpl> logicalExpressionQueryList) {
-    processedQueries = new ArrayList<TaskQueryImpl>();
-    closingParenthesesCounterList = new ArrayList<Integer>();
-    closingParenthesesCounter = 0;
-    expressionClosed = true;
+    ArrayList<TaskQueryImpl> processedQueries = new ArrayList<TaskQueryImpl>();
+    ArrayList<Integer> closingParenthesesCounterList = new ArrayList<Integer>();
+    int[] closingParenthesesCounter = {0};
+    boolean[] isExpressionClosed = {true};
     
-    buildClosingParenthesesAmountList(logicalExpressionQueryList);
+    buildClosingParenthesesAmountList(logicalExpressionQueryList, processedQueries, closingParenthesesCounterList,
+      closingParenthesesCounter, isExpressionClosed);
 
     List<String> closingParentheses = new LinkedList<String>();
 
@@ -41,24 +37,26 @@ public class MyBatisTaskQueryHelper {
     return closingParentheses;
   }
 
-  private static void buildClosingParenthesesAmountList(List<TaskQueryImpl> queryList) {
+  private static void buildClosingParenthesesAmountList(List<TaskQueryImpl> queryList, List<TaskQueryImpl> processedQueries,
+    List<Integer> closingParenthesesCounterList, int[] closingParenthesesCounter, boolean[] isExpressionClosed) {
     for (TaskQueryImpl query : queryList) {
-      if(!expressionClosed) {
+      if(!isExpressionClosed[0]) {
         closingParenthesesCounterList.remove(closingParenthesesCounterList.size()-1);
-        closingParenthesesCounterList.add(closingParenthesesCounter);
-        closingParenthesesCounter = 0;
-        expressionClosed = true;
+        closingParenthesesCounterList.add(closingParenthesesCounter[0]);
+        closingParenthesesCounter[0] = 0;
+        isExpressionClosed[0] = true;
       }
 
       if (!processedQueries.contains(query)) {
         closingParenthesesCounterList.add(0);
         if (!query.getLogicalExpressionQueryChildren().isEmpty()) {
-          buildClosingParenthesesAmountList(query.getLogicalExpressionQueryChildren());
+          buildClosingParenthesesAmountList(query.getLogicalExpressionQueryChildren(), processedQueries,
+            closingParenthesesCounterList, closingParenthesesCounter, isExpressionClosed);
         } else {
-          expressionClosed = false;
+          isExpressionClosed[0] = false;
         }
 
-        closingParenthesesCounter++;
+        closingParenthesesCounter[0]++;
         processedQueries.add(query);
       }
     }

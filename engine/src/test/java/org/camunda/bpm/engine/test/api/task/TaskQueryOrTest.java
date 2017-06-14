@@ -2165,39 +2165,6 @@ public class TaskQueryOrTest extends PluggableProcessEngineTestCase {
     assertEquals(1, tasks.size());
   }
 
-  public void testQueryWithOrWithoutCandidateUsers() {
-    BpmnModelInstance processDefinitionWithoutCandidateUser = Bpmn.createExecutableProcess("processDefinitionWithoutCandidateUser")
-      .startEvent()
-      .userTask()
-      .camundaCandidateGroups("sales")
-      .endEvent()
-      .done();
-
-    deployment(processDefinitionWithoutCandidateUser);
-
-    BpmnModelInstance processDefinitionWithCandidateUser = Bpmn.createExecutableProcess("processDefinitionWithCandidateUser")
-      .startEvent()
-      .userTask()
-      .camundaCandidateUsers("anna")
-      .endEvent()
-      .done();
-
-    deployment(processDefinitionWithCandidateUser);
-
-    runtimeService.startProcessInstanceByKey("processDefinitionWithoutCandidateUser");
-    runtimeService.startProcessInstanceByKey("processDefinitionWithCandidateUser");
-
-    List<Task> tasks = taskService.createTaskQuery()
-      .processDefinitionKeyIn("processDefinitionWithoutCandidateUser", "processDefinitionWithCandidateUser")
-      .startOr()
-      .withCandidateUsers()
-      .withoutCandidateUsers()
-      .endOr()
-      .list();
-
-    assertEquals(2, tasks.size());
-  }
-
   public void testQueryWithoutCandidateUsersOr() {
     BpmnModelInstance process = Bpmn.createExecutableProcess("process")
       .startEvent()
@@ -3361,33 +3328,189 @@ public class TaskQueryOrTest extends PluggableProcessEngineTestCase {
     assertEquals(2, tasks.size());
   }
 
-  public void testExtendTaskQueryList_ProcessDefinitionKeyIn() {
+  public void testQueryCandidateUsers() {
     // given
-    String processDefinitionKey = "invoice";
-    TaskQuery query = taskService
-      .createTaskQuery()
-      .startOr()
-      .processDefinitionKeyIn(processDefinitionKey);
+    BpmnModelInstance processDefinition1 = Bpmn.createExecutableProcess("processDefinition1")
+      .startEvent()
+        .userTask()
+          .camundaCandidateUsers("John Doe")
+      .endEvent()
+      .done();
 
-    TaskQuery extendingQuery = taskService.createTaskQuery().endOr();
+    deployment(processDefinition1);
+
+    BpmnModelInstance processDefinition2 = Bpmn.createExecutableProcess("processDefinition2")
+      .startEvent()
+        .userTask()
+          .camundaCandidateUsers("Jack Camundo")
+      .endEvent()
+      .done();
+
+    deployment(processDefinition2);
+
+    runtimeService.startProcessInstanceByKey("processDefinition1");
+    runtimeService.startProcessInstanceByKey("processDefinition2");
 
     // when
-    TaskQuery result = ((TaskQueryImpl)query).extend(extendingQuery);
+    List<Task> tasks = taskService.createTaskQuery()
+      .startOr()
+        .taskCandidateUser("John Doe")
+        .taskCandidateUser("Jack Camundo")
+      .endOr()
+      .list();
 
     // then
-    String[] processDefinitionKeys = ((TaskQueryImpl) result).getProcessDefinitionKeys();
-    assertEquals(1, processDefinitionKeys.length);
-    assertEquals(processDefinitionKey, processDefinitionKeys[0]);
+    assertEquals(2, tasks.size());
+  }
+
+  public void testQueryCandidateGroups() {
+    // given
+    BpmnModelInstance processDefinition1 = Bpmn.createExecutableProcess("processDefinition1")
+      .startEvent()
+        .userTask()
+          .camundaCandidateGroups("sales")
+      .endEvent()
+      .done();
+
+    deployment(processDefinition1);
+
+    BpmnModelInstance processDefinition2 = Bpmn.createExecutableProcess("processDefinition2")
+      .startEvent()
+        .userTask()
+          .camundaCandidateGroups("marketing")
+      .endEvent()
+      .done();
+
+    deployment(processDefinition2);
+
+    runtimeService.startProcessInstanceByKey("processDefinition1");
+    runtimeService.startProcessInstanceByKey("processDefinition2");
+
+    // when
+    List<Task> tasks = taskService.createTaskQuery()
+      .startOr()
+        .taskCandidateGroup("sales")
+        .taskCandidateGroup("marketing")
+      .endOr()
+      .list();
+
+    // then
+    assertEquals(2, tasks.size());
+  }
+
+  public void testQueryWithCandidateGroupsOrWithCandidateUsers() {
+    // given
+    BpmnModelInstance processDefinition1 = Bpmn.createExecutableProcess("processDefinition1")
+      .startEvent()
+        .userTask().name("Task1")
+          .camundaCandidateGroups("sales")
+      .endEvent()
+      .done();
+
+    deployment(processDefinition1);
+
+    BpmnModelInstance processDefinition2 = Bpmn.createExecutableProcess("processDefinition2")
+      .startEvent()
+        .userTask().name("Task2")
+          .camundaCandidateUsers("John Doe")
+      .endEvent()
+      .done();
+
+    deployment(processDefinition2);
+
+    runtimeService.startProcessInstanceByKey("processDefinition1");
+    runtimeService.startProcessInstanceByKey("processDefinition2");
+
+    // when
+    List<Task> tasks = taskService.createTaskQuery()
+      .startOr()
+        .taskName("Task1")
+        .taskName("Task2")
+      .endOr()
+      .startOr()
+        .withCandidateGroups()
+        .withoutCandidateUsers()
+      .endOr()
+      .list();
+
+    // then
+    assertEquals(1, tasks.size());
+  }
+
+  public void testQueryWithOrWithoutCandidateUsers() {
+    BpmnModelInstance processDefinitionWithoutCandidateUser = Bpmn.createExecutableProcess("processDefinitionWithoutCandidateUser")
+      .startEvent()
+        .userTask()
+          .camundaCandidateGroups("sales")
+      .endEvent()
+      .done();
+
+    deployment(processDefinitionWithoutCandidateUser);
+
+    BpmnModelInstance processDefinitionWithCandidateUser = Bpmn.createExecutableProcess("processDefinitionWithCandidateUser")
+      .startEvent()
+        .userTask()
+          .camundaCandidateUsers("John Doe")
+      .endEvent()
+      .done();
+
+    deployment(processDefinitionWithCandidateUser);
+
+    runtimeService.startProcessInstanceByKey("processDefinitionWithoutCandidateUser");
+    runtimeService.startProcessInstanceByKey("processDefinitionWithCandidateUser");
+
+    List<Task> tasks = taskService.createTaskQuery()
+      .processDefinitionKeyIn("processDefinitionWithoutCandidateUser", "processDefinitionWithCandidateUser")
+      .startOr()
+        .withCandidateUsers()
+        .withoutCandidateUsers()
+      .endOr()
+      .list();
+
+    assertEquals(2, tasks.size());
+  }
+
+  public void testQueryWithOrWithoutCandidateGroups() {
+    BpmnModelInstance processDefinitionWithoutCandidateUser = Bpmn.createExecutableProcess("processDefinitionWithoutCandidateUser")
+      .startEvent()
+        .userTask()
+          .camundaCandidateGroups("sales")
+      .endEvent()
+      .done();
+
+    deployment(processDefinitionWithoutCandidateUser);
+
+    BpmnModelInstance processDefinitionWithCandidateUser = Bpmn.createExecutableProcess("processDefinitionWithCandidateUser")
+      .startEvent()
+        .userTask()
+          .camundaCandidateUsers("John Doe")
+      .endEvent()
+      .done();
+
+    deployment(processDefinitionWithCandidateUser);
+
+    runtimeService.startProcessInstanceByKey("processDefinitionWithoutCandidateUser");
+    runtimeService.startProcessInstanceByKey("processDefinitionWithCandidateUser");
+
+    List<Task> tasks = taskService.createTaskQuery()
+      .processDefinitionKeyIn("processDefinitionWithoutCandidateUser", "processDefinitionWithCandidateUser")
+      .startOr()
+        .withCandidateGroups()
+        .withoutCandidateGroups()
+      .endOr()
+      .list();
+
+    assertEquals(2, tasks.size());
   }
 
   public void testQueryOr() {
     List<Task> tasks = taskService.createTaskQuery()
       .startOr()
-      .taskNameLike("management%")
-      .startAnd()
-      .taskUnassigned()
-      .taskDescription("gonzo_description")
-      .endAnd()
+        .taskNameLike("management%")
+        .startAnd()
+          .taskUnassigned()
+          .taskDescription("gonzo_description")
+        .endAnd()
       .endOr()
       .list();
 
@@ -3403,42 +3526,42 @@ public class TaskQueryOrTest extends PluggableProcessEngineTestCase {
       .taskNameLike("management%")
       .taskName("management")
       .startAnd()
-      .taskNameLike("management%")
-      .taskName("management")
-      .startOr()
-      .taskNameLike("management%")
-      .taskName("management")
-      .startAnd()
-      .taskUnassigned()
-      .taskName("management")
+        .taskNameLike("management%")
+        .taskName("management")
+        .startOr()
+          .taskNameLike("management%")
+          .taskName("management")
+          .startAnd()
+            .taskUnassigned()
+            .taskName("management")
+          .endAnd()
+        .endOr()
       .endAnd()
-      .endOr()
-      .endAnd()
       .startAnd()
-      .startOr()
-      .taskNameLike("management%")
-      .endOr()
-      .startOr()
-      .taskNameLike("management%")
-      .endOr()
-      .taskNameLike("management%")
-      .taskName("management")
-      .startOr()
-      .taskNameLike("management%")
-      .taskName("management")
-      .startOr()
-      .taskNameLike("management%")
-      .taskName("management")
-      .startOr()
-      .taskNameLike("management%")
-      .taskName("management")
-      .startAnd()
-      .taskNameLike("management%")
-      .taskName("management")
-      .endAnd()
-      .endOr()
-      .endOr()
-      .endOr()
+        .startOr()
+          .taskNameLike("management%")
+        .endOr()
+        .startOr()
+          .taskNameLike("management%")
+        .endOr()
+        .taskNameLike("management%")
+        .taskName("management")
+        .startOr()
+          .taskNameLike("management%")
+          .taskName("management")
+          .startOr()
+            .taskNameLike("management%")
+            .taskName("management")
+            .startOr()
+              .taskNameLike("management%")
+              .taskName("management")
+              .startAnd()
+                .taskNameLike("management%")
+                .taskName("management")
+              .endAnd()
+            .endOr()
+          .endOr()
+        .endOr()
       .endAnd()
       .list();
 
