@@ -197,29 +197,29 @@ public interface TaskQuery extends Query<TaskQuery, Task>{
    */
   TaskQuery taskInvolvedUserExpression(String involvedUserExpression);
 
-  /** 
-   * Only select tasks which have a candidate group 
+  /**
+   * Only select tasks which have a candidate group
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    */
   TaskQuery withCandidateGroups();
 
-  /** 
-   * Only select tasks which have no candidate group 
+  /**
+   * Only select tasks which have no candidate group
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    */
   TaskQuery withoutCandidateGroups();
 
-  /** 
-   * Only select tasks which have a candidate user 
+  /**
+   * Only select tasks which have a candidate user
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    */
   TaskQuery withCandidateUsers();
 
-  /** 
-   * Only select tasks which have no candidate user 
+  /**
+   * Only select tasks which have no candidate user
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    */
@@ -787,84 +787,84 @@ public interface TaskQuery extends Query<TaskQuery, Task>{
   TaskQuery orderByTaskId();
 
   /**
-   * Order by task name (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by task name (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
   TaskQuery orderByTaskName();
 
   /**
-   * Order by task name case insensitive (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by task name case insensitive (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
   TaskQuery orderByTaskNameCaseInsensitive();
 
   /**
-   * Order by description (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by description (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
   TaskQuery orderByTaskDescription();
 
   /**
-   * Order by priority (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by priority (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
   TaskQuery orderByTaskPriority();
 
   /**
-   * Order by assignee (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by assignee (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
   TaskQuery orderByTaskAssignee();
 
   /**
-   * Order by the time on which the tasks were created (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by the time on which the tasks were created (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
   TaskQuery orderByTaskCreateTime();
 
   /**
-   * Order by process instance id (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by process instance id (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
   TaskQuery orderByProcessInstanceId();
 
   /**
-   * Order by case instance id (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by case instance id (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
   TaskQuery orderByCaseInstanceId();
 
   /**
-   * Order by execution id (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by execution id (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
   TaskQuery orderByExecutionId();
 
   /**
-   * Order by case execution id (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by case execution id (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
   TaskQuery orderByCaseExecutionId();
 
   /**
-   * Order by due date (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by due date (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
   TaskQuery orderByDueDate();
 
   /**
-   * Order by follow-up date (needs to be followed by {@link #asc()} or {@link #desc()}). 
+   * Order by follow-up date (needs to be followed by {@link #asc()} or {@link #desc()}).
    *
    * @throws ProcessEngineException When method has been executed within "or query".
    * */
@@ -932,6 +932,8 @@ public interface TaskQuery extends Query<TaskQuery, Task>{
    */
   TaskQuery startOr();
 
+  TaskQuery startAnd();
+
   /**
    * <p>Closes the "or" statement.</p>
    *
@@ -944,4 +946,6 @@ public interface TaskQuery extends Query<TaskQuery, Task>{
    * </ul>
    */
   TaskQuery endOr();
+
+  TaskQuery endAnd();
 }

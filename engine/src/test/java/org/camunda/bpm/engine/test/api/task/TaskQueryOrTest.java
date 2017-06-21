@@ -71,6 +71,29 @@ public class TaskQueryOrTest {
   }
 
   @Test
+  public void shouldTest() {
+    taskService.createTaskQuery()
+      .taskName("foo")
+      .startOr()
+        .taskId("x")
+        .taskName("bar")
+        .startOr()
+          .taskId("y")
+          .taskName("kermit")
+        .endOr()
+      .endOr()
+      .startOr()
+        .taskId("z")
+        .taskName("blub")
+        .startAnd()
+          .taskId("a")
+          .taskName("x")
+        .endAnd()
+      .endOr()
+      .list();
+  }
+
+  @Test
   public void shouldThrowExceptionByMissingStartOr() {
     try {
       taskService.createTaskQuery().endOr();
