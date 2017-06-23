@@ -14,6 +14,7 @@ package org.camunda.bpm.engine.impl.db;
 
 import java.util.List;
 
+import org.apache.ibatis.executor.BatchResult;
 import org.camunda.bpm.engine.impl.db.entitymanager.operation.DbOperation;
 import org.camunda.bpm.engine.impl.interceptor.Session;
 
@@ -44,6 +45,8 @@ public interface PersistenceSession extends Session {
 
   void rollback();
 
+  List<BatchResult> flushOperations();
+
   // Schema Operations /////////////////////////////////
 
   void dbSchemaCheckVersion();
@@ -57,9 +60,9 @@ public interface PersistenceSession extends Session {
   void dbSchemaUpdate();
 
   List<String> getTableNamesPresent();
-  
+
   // listeners //////////////////////////////////////////
-  
+
   void addEntityLoadListener(EntityLoadListener listener);
 
 }

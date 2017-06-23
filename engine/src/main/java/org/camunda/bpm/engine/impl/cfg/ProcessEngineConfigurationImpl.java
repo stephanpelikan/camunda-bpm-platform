@@ -1322,7 +1322,12 @@ public abstract class ProcessEngineConfigurationImpl extends ProcessEngineConfig
 
   protected void initPersistenceProviders() {
     ensurePrefixAndSchemaFitToegether(databaseTablePrefix, databaseSchema);
-    dbSqlSessionFactory = new DbSqlSessionFactory();
+
+    if (dbSqlSessionFactory == null)
+    {
+      dbSqlSessionFactory = new DbSqlSessionFactory();
+    }
+
     dbSqlSessionFactory.setDatabaseType(databaseType);
     dbSqlSessionFactory.setIdGenerator(idGenerator);
     dbSqlSessionFactory.setSqlSessionFactory(sqlSessionFactory);

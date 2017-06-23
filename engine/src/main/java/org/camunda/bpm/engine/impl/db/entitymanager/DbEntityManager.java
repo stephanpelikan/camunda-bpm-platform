@@ -25,9 +25,12 @@ import static org.camunda.bpm.engine.impl.db.entitymanager.operation.DbOperation
 import static org.camunda.bpm.engine.impl.db.entitymanager.operation.DbOperationType.UPDATE_BULK;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
+import org.apache.ibatis.executor.BatchResult;
 import org.camunda.bpm.engine.impl.DeploymentQueryImpl;
 import org.camunda.bpm.engine.impl.ExecutionQueryImpl;
 import org.camunda.bpm.engine.impl.GroupQueryImpl;
@@ -40,20 +43,21 @@ import org.camunda.bpm.engine.impl.HistoricVariableInstanceQueryImpl;
 import org.camunda.bpm.engine.impl.JobQueryImpl;
 import org.camunda.bpm.engine.impl.Page;
 import org.camunda.bpm.engine.impl.ProcessDefinitionQueryImpl;
+import org.camunda.bpm.engine.impl.ProcessEngineLogger;
 import org.camunda.bpm.engine.impl.ProcessInstanceQueryImpl;
 import org.camunda.bpm.engine.impl.TaskQueryImpl;
 import org.camunda.bpm.engine.impl.UserQueryImpl;
-import org.camunda.bpm.engine.impl.ProcessEngineLogger;
 import org.camunda.bpm.engine.impl.cfg.IdGenerator;
 import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl;
 import org.camunda.bpm.engine.impl.cmmn.entity.repository.CaseDefinitionQueryImpl;
 import org.camunda.bpm.engine.impl.context.Context;
 import org.camunda.bpm.engine.impl.db.DbEntity;
 import org.camunda.bpm.engine.impl.db.DbEntityLifecycleAware;
+import org.camunda.bpm.engine.impl.db.EnginePersistenceLogger;
 import org.camunda.bpm.engine.impl.db.EntityLoadListener;
+import org.camunda.bpm.engine.impl.db.HasDbRevision;
 import org.camunda.bpm.engine.impl.db.ListQueryParameterObject;
 import org.camunda.bpm.engine.impl.db.PersistenceSession;
-import org.camunda.bpm.engine.impl.db.EnginePersistenceLogger;
 import org.camunda.bpm.engine.impl.db.entitymanager.cache.CachedDbEntity;
 import org.camunda.bpm.engine.impl.db.entitymanager.cache.DbEntityCache;
 import org.camunda.bpm.engine.impl.db.entitymanager.cache.DbEntityState;
@@ -304,10 +308,28 @@ public class DbEntityManager implements Session, EntityLoadListener {
         } catch (Exception e) {
           throw LOG.flushDbOperationException(operationsToFlush, dbOperation, e);
         }
-        if (dbOperation.isFailed()) {
-          handleOptimisticLockingException(dbOperation);
+//        if (dbOperation.isFailed()) {
+//          handleOptimisticLockingException(dbOperation);
+//        }
+      }
+
+      List<BatchResult> flushResult = persistenceSession.flushOperations();
+      LOG.printBatchResults(flushResult);
+
+      Iterator<DbOperation> operationIt = operationsToFlush.iterator();
+      for (BatchResult batchResult : flushResult)
+      {
+        for (int statementResult : batchResult.getUpdateCounts())
+        {
+          DbOperation thisOperation = operationIt.next();
+          if (thisOperation instanceof DbEntityOperation && ((DbEntityOperation) thisOperation).getEntity() instanceof HasDbRevision && statementResult != 1)
+          {
+            ((DbEntityOperation) thisOperation).setFailed(true);
+            handleOptimisticLockingException(thisOperation);
+          }
         }
       }
+
     } finally {
       if (isIgnoreForeignKeysForNextFlush) {
         persistenceSession.executeNonEmptyUpdateStmt(TOGGLE_FOREIGN_KEY_STMT, true);

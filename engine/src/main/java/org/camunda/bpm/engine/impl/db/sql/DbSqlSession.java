@@ -31,7 +31,9 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.ibatis.executor.BatchResult;
 import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.impl.ProcessEngineLogger;
@@ -69,7 +71,7 @@ public class DbSqlSession extends AbstractPersistenceSession {
     this.dbSqlSessionFactory = dbSqlSessionFactory;
     this.sqlSession = dbSqlSessionFactory
       .getSqlSessionFactory()
-      .openSession();
+      .openSession(ExecutorType.BATCH);
   }
 
   public DbSqlSession(DbSqlSessionFactory dbSqlSessionFactory, Connection connection, String catalog, String schema) {
@@ -82,6 +84,11 @@ public class DbSqlSession extends AbstractPersistenceSession {
   }
 
   // select ////////////////////////////////////////////
+
+  @Override
+  public List<BatchResult> flushOperations() {
+    return sqlSession.flushStatements();
+  }
 
   public List<?> selectList(String statement, Object parameter){
     statement = dbSqlSessionFactory.mapStatement(statement);

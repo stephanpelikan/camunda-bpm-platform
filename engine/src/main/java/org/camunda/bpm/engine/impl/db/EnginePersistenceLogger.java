@@ -12,10 +12,12 @@
  */
 package org.camunda.bpm.engine.impl.db;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.ibatis.executor.BatchResult;
 import org.camunda.bpm.application.ProcessApplicationUnavailableException;
 import org.camunda.bpm.engine.AuthorizationException;
 import org.camunda.bpm.engine.BadUserRequestException;
@@ -644,4 +646,19 @@ public class EnginePersistenceLogger extends ProcessEngineLogger {
         thatDeploymentId);
   }
 
+
+  public void printBatchResults(List<BatchResult> results)
+  {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Batch summary:\n");
+    for (int i = 0; i < results.size(); i++)
+    {
+      BatchResult result = results.get(i);
+      sb.append("Result " + i + ":\n");
+      sb.append(result.getSql().replaceAll("\n", "").replaceAll("\\s+", " ") + "\n");
+      sb.append(Arrays.toString(result.getUpdateCounts()) + "\n");
+    }
+
+    logDebug("999", sb.toString());
+  }
 }
