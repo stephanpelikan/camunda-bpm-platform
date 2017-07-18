@@ -73,7 +73,11 @@ public class ExceptionUtil {
     while (ex.getCause() != null) {
       ex = ex.getCause();
       if (ex instanceof SQLException && (ex.getMessage().contains("too long")
-        || ex.getMessage().contains("too large") || ex.getMessage().contains("ORA-01461"))) {
+        || ex.getMessage().contains("too large")
+        || ex.getMessage().contains("ORA-01461")
+        || ex.getMessage().contains("ORA-01401")
+        || ex.getMessage().contains("data would be truncated")
+        || ex.getMessage().contains("SQLCODE=-302, SQLSTATE=22001"))) {
         return true;
       }
     }
