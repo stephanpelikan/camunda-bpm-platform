@@ -72,6 +72,12 @@
                   <target>
                     <move file="${project.build.outputDirectory}/WEB-INF/securityFilterRules.json" todir="${project.build.outputDirectory}" />
                     <delete dir="${project.build.outputDirectory}/WEB-INF" />
+                    <!-- TODO svt remove me -->
+                    <!--<move todir="${project.build.outputDirectory}/META-INF/resources/webjars/camunda/${project.version}" >-->
+                      <!--<fileset dir="${project.build.outputDirectory}/">-->
+                        <!--<include name="**/*.*"/>-->
+                      <!--</fileset>-->
+                    <!--</move>-->
                   </target>
                 </configuration>
                 <goals>
