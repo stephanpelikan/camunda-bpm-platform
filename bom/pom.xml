@@ -131,25 +131,8 @@
       </dependency>
       <dependency>
         <groupId>org.camunda.bpm.webapp</groupId>
-        <artifactId>camunda-webapp</artifactId>
-        <version>${project.version}</version>
-        <classifier>classes</classifier>
-      </dependency>
-      <dependency>
-        <groupId>org.camunda.bpm.webapp</groupId>
         <artifactId>camunda-webapp-webjar</artifactId>
         <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.camunda.bpm.webapp</groupId>
-        <artifactId>camunda-webapp-webjar-ee</artifactId> <!-- TODO svt how to deal with version here? -ee -SNAPSHOT ? -->
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.camunda.bpm.webapp</groupId>
-        <artifactId>camunda-webapp-ee-plugins</artifactId>
-        <version>${project.version}</version>   <!-- TODO svt how to deal with version here? -ee -SNAPSHOT ? -->
-        <classifier>classes</classifier>
       </dependency>
 
       <!-- dmn engine -->
