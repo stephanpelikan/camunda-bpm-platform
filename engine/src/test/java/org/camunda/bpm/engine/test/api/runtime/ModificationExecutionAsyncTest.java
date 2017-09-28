@@ -200,7 +200,7 @@ public class ModificationExecutionAsyncTest {
       assertThat(e.getMessage(), containsString("Process instance ids is empty"));
     }
   }
-  
+
   @Test
   public void createModificationWithNonExistingProcessDefinitionId() {
     DeploymentWithDefinitions deployment = testRule.deploy(instance);
@@ -214,7 +214,7 @@ public class ModificationExecutionAsyncTest {
       assertThat(e.getMessage(), containsString("processDefinition is null"));
     }
   }
-  
+
   @Test
   public void createSeedJob() {
     // when
@@ -542,7 +542,7 @@ public class ModificationExecutionAsyncTest {
     // but a monitor job exists
     assertNotNull(helper.getMonitorJob(batch));
   }
-  
+
   @Test
   public void executeModificationJobsForProcessInstancesWithDifferentStates() {
 
@@ -552,10 +552,10 @@ public class ModificationExecutionAsyncTest {
     List<String> processInstanceIds = helper.startInstances("process1", 1);
     Task task = rule.getTaskService().createTaskQuery().singleResult();
     rule.getTaskService().complete(task.getId());
-    
+
     List<String> anotherProcessInstanceIds = helper.startInstances("process1", 1);
     processInstanceIds.addAll(anotherProcessInstanceIds);
-    
+
     Batch batch = runtimeService.createModification(processDefinition.getId()).startBeforeActivity("user2").processInstanceIds(processInstanceIds).executeAsync();
 
     helper.executeSeedJob(batch);
