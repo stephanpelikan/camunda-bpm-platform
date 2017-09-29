@@ -52,7 +52,7 @@ public class ProcessInstanceModificationCmd extends AbstractModificationCmd<Void
       ensureProcessInstanceExist(processInstanceId, processInstance);
       ensureSameProcessDefinition(processInstance, processDefinition.getId());
 
-      ProcessInstanceModificationBuilderImpl builder = createProcessInstanceBuilder(processInstanceId, commandContext);
+      ProcessInstanceModificationBuilderImpl builder = createProcessInstanceModificationBuilder(processInstanceId, commandContext);
       builder.execute(false, skipCustomListeners, skipIoMappings);
     }
 
@@ -71,8 +71,7 @@ public class ProcessInstanceModificationCmd extends AbstractModificationCmd<Void
     }
   }
 
-  protected ProcessInstanceModificationBuilderImpl createProcessInstanceBuilder(final String processInstanceId, final CommandContext commandContext) {
-
+  protected ProcessInstanceModificationBuilderImpl createProcessInstanceModificationBuilder(final String processInstanceId, final CommandContext commandContext) {
     ProcessInstanceModificationBuilderImpl processInstanceModificationBuilder = new ProcessInstanceModificationBuilderImpl(commandContext, processInstanceId);
     List<AbstractProcessInstanceModificationCommand> operations = processInstanceModificationBuilder.getModificationOperations();
 

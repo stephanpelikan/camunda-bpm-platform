@@ -29,6 +29,7 @@ import org.camunda.bpm.engine.management.JobDefinition;
 import org.camunda.bpm.engine.repository.DeploymentWithDefinitions;
 import org.camunda.bpm.engine.repository.ProcessDefinition;
 import org.camunda.bpm.engine.runtime.ActivityInstance;
+import org.camunda.bpm.engine.runtime.Execution;
 import org.camunda.bpm.engine.runtime.Job;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.runtime.ProcessInstanceQuery;
@@ -1016,6 +1017,38 @@ public class ModificationExecutionAsyncTest {
     ExecutionEntity execution = (ExecutionEntity) runtimeService.createExecutionQuery().singleResult();
     assertNotNull(execution);
     assertEquals("user", execution.getActivityId());
+  }
+
+  @Test
+  public void testCancelWithFlagForManyInstances() {
+    // given
+    this.instance = Bpmn.createExecutableProcess("process1")
+        .startEvent("start")
+        .serviceTask("ser").camundaExpression("${true}")
+        .userTask("user")
+        .endEvent("end")
+        .done();
+
+    ProcessDefinition processDefinition = testRule.deployAndGetDefinition(instance);
+
+    List<String> processInstanceIds = helper.startInstances("process1", 10);
+
+    // when
+    Batch batch = runtimeService.createModification(processDefinition.getId())
+      .startBeforeActivity("ser")
+      .cancelAllForActivity("user", true)
+      .processInstanceIds(processInstanceIds)
+      .executeAsync();
+
+    helper.executeSeedJob(batch);
+    helper.executeJobs(batch);
+
+    // then
+    for (String processInstanceId : processInstanceIds) {
+      Execution execution = runtimeService.createExecutionQuery().processInstanceId(processInstanceId).singleResult();
+      assertNotNull(execution);
+      assertEquals("user", ((ExecutionEntity) execution).getActivityId());
+    }
   }
 
   protected void assertBatchCreated(Batch batch, int processInstanceCount) {
