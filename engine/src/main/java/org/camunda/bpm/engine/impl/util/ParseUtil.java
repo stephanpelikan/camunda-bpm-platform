@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 
 import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.exception.NotValidException;
+import org.camunda.bpm.engine.impl.ProcessEngineLogger;
 import org.camunda.bpm.engine.impl.bpmn.parser.FailedJobRetryConfiguration;
 import org.camunda.bpm.engine.impl.calendar.DurationHelper;
 import org.camunda.bpm.engine.impl.context.Context;
@@ -13,6 +14,8 @@ import org.camunda.bpm.engine.impl.el.Expression;
 import org.camunda.bpm.engine.impl.el.ExpressionManager;
 
 public class ParseUtil {
+
+  private static final EngineUtilLogger LOG = ProcessEngineLogger.UTIL_LOGGER;
 
   protected static final Pattern REGEX_TTL_ISO = Pattern.compile("^P(\\d+)D$");
 
@@ -74,17 +77,13 @@ public class ParseUtil {
             retries = durationHelper.getTimes();
           }
         } catch (Exception e) {
-          // TODO: handle exception
-//          log warning
+          LOG.logParsingRetryIntervals(intervals[0], e);
           return null;
         }
       }
       return new FailedJobRetryConfiguration(retries, Arrays.asList(intervals));
-    }
-    else {
+    } else {
       return null;
     }
-
-//    return new ArrayList<String>(Arrays.asList(failedJobRetryIntervals.trim().split("\\s*,\\s*")));
   }
 }

@@ -57,7 +57,6 @@ public class DefaultJobRetryCmd extends JobRetryCmd {
     JobEntity job = getJob();
 
     ActivityImpl activity = getCurrentActivity(commandContext, job);
-//    String globalFailedJobRetryTimeCycle = commandContext.getProcessEngineConfiguration().getFailedJobRetryTimeCycle();
 
     if (activity == null) {
       LOG.debugFallbackToDefaultRetryStrategy();
@@ -89,27 +88,7 @@ public class DefaultJobRetryCmd extends JobRetryCmd {
   }
 
   protected void executeCustomStrategy(CommandContext commandContext, JobEntity job, ActivityImpl activity) throws Exception {
-//    String failedJobRetryTimeCycle = null;
-//    List<String> retryIntervals = null;
-//    if (activity != null) {
-//      FailedJobRetryConfiguration failedJobParseRetryConf = activity.getProperties().get(DefaultFailedJobParseListener.FAILED_JOB_CONFIGURATION);
-//      if(failedJobParseRetryConf.hasIntervals()){
-//        retryIntervals = failedJobParseRetryConf.getRetryIntervals();
-//      } else {
-//        failedJobRetryTimeCycle = getFailedJobRetryTimeCycle(job,  failedJobParseRetryConf.getRetryCycle());
-//        if (failedJobRetryTimeCycle.contains(",")) {
-//          retryIntervals = ParseUtil.parseRetryIntervals(failedJobRetryTimeCycle);
-//        }
-//      }
-//    }
-
-
-    FailedJobRetryConfiguration retryConfiguration = activity.getProperties().get(DefaultFailedJobParseListener.FAILED_JOB_CONFIGURATION);
-
-    if (retryConfiguration != null && retryConfiguration.getExpression()!=null) {
-      String retryIntervals = getFailedJobRetryTimeCycle(job, retryConfiguration.getExpression());
-      retryConfiguration = ParseUtil.parseRetryIntervals(retryIntervals);
-    }
+    FailedJobRetryConfiguration retryConfiguration = getFailedJobRetryConfiguration(job, activity);
 
     if (retryConfiguration == null) {
       executeStandardStrategy(commandContext);
@@ -161,6 +140,17 @@ public class DefaultJobRetryCmd extends JobRetryCmd {
                   .findExecutionById(executionId);
   }
 
+  protected FailedJobRetryConfiguration getFailedJobRetryConfiguration(JobEntity job, ActivityImpl activity) {
+    FailedJobRetryConfiguration retryConfiguration = activity.getProperties().get(DefaultFailedJobParseListener.FAILED_JOB_CONFIGURATION);
+
+    if (retryConfiguration != null && retryConfiguration.getExpression() != null) {
+      String retryIntervals = getFailedJobRetryTimeCycle(job, retryConfiguration.getExpression());
+      retryConfiguration = ParseUtil.parseRetryIntervals(retryIntervals);
+    }
+
+    return retryConfiguration;
+  }
+
   protected String getFailedJobRetryTimeCycle(JobEntity job, Expression expression) {
 
     String executionId = job.getExecutionId();
@@ -193,23 +183,6 @@ public class DefaultJobRetryCmd extends JobRetryCmd {
     }
 
   }
-
-//  protected DurationHelper getDurationHelper(JobEntity job, String failedJobRetryTimeCycle, List<String> retryIntervals) throws Exception {
-//    DurationHelper durationHelper = null;
-//    if (retryIntervals == null || retryIntervals.isEmpty()) {
-//      durationHelper = getDurationHelper(failedJobRetryTimeCycle);
-//    } else {
-//      if (isFirstJobExecution(job)) {
-//        initializeRetries(job, retryIntervals.size());
-//      }
-//      if (retryIntervals.size() >= job.getRetries()) {
-//        durationHelper = getDurationHelper(retryIntervals.get(retryIntervals.size() - job.getRetries()));
-//      } else {
-//        durationHelper = getDurationHelper(retryIntervals.get(retryIntervals.size() - 1));
-//      }
-//    }
-//    return durationHelper;
-//  }
 
   protected DurationHelper getDurationHelper(String failedJobRetryTimeCycle) throws Exception {
     return new DurationHelper(failedJobRetryTimeCycle);

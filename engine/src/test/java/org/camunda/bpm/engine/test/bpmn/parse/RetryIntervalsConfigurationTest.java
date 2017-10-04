@@ -33,6 +33,7 @@ import org.camunda.bpm.engine.impl.util.ClockUtil;
 import org.camunda.bpm.engine.runtime.Job;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.test.api.AbstractAsyncOperationsTest;
+import org.camunda.bpm.engine.test.bpmn.executionlistener.RecorderExecutionListener;
 import org.camunda.bpm.engine.test.util.ProcessEngineBootstrapRule;
 import org.camunda.bpm.engine.test.util.ProcessEngineTestRule;
 import org.camunda.bpm.engine.test.util.ProvidedProcessEngineRule;
@@ -124,6 +125,43 @@ public class RetryIntervalsConfigurationTest extends AbstractAsyncOperationsTest
     currentTime = DateUtils.addMinutes(currentTime, 3);
     assertLockExpirationTime(currentTime);
     ClockUtil.setCurrentTime(currentTime);
+
+    jobRetries = executeJob(processInstanceId);
+    assertEquals(0, jobRetries);
+  }
+
+  @Test
+  public void testRetryGlobalConfigurationWithExecutionListenter() throws ParseException {
+    // given
+    engineRule.getProcessEngineConfiguration().setFailedJobRetryTimeCycle("PT5M");
+
+    BpmnModelInstance bpmnModelInstance = Bpmn.createExecutableProcess(PROCESS_ID)
+    .startEvent()
+    .serviceTask()
+      .camundaClass(FAILING_CLASS)
+      .camundaAsyncBefore()
+      .camundaExecutionListenerClass(RecorderExecutionListener.EVENTNAME_START, RecorderExecutionListener.class.getName())
+    .endEvent()
+    .done();
+    testRule.deploy(bpmnModelInstance);
+
+    ClockUtil.setCurrentTime(SIMPLE_DATE_FORMAT.parse("2017-01-01T09:55:00"));
+
+    ProcessInstance pi = runtimeService.startProcessInstanceByKey(PROCESS_ID);
+
+    Date currentTime = SIMPLE_DATE_FORMAT.parse("2017-01-01T10:00:00");
+    ClockUtil.setCurrentTime(currentTime);
+
+    String processInstanceId = pi.getProcessInstanceId();
+
+    int jobRetries = executeJob(processInstanceId);
+    assertEquals(1, jobRetries);
+    currentTime = DateUtils.addMinutes(currentTime, 5);
+    assertLockExpirationTime(currentTime);
+    ClockUtil.setCurrentTime(currentTime);
+
+    jobRetries = executeJob(processInstanceId);
+    assertEquals(0, jobRetries);
   }
 
   @Test
@@ -187,6 +225,35 @@ public class RetryIntervalsConfigurationTest extends AbstractAsyncOperationsTest
     currentTime = DateUtils.addMinutes(currentTime, 8);
     assertLockExpirationTime(currentTime);
     ClockUtil.setCurrentTime(currentTime);
+
+    jobRetries = executeJob(processInstanceId);
+    assertEquals(0, jobRetries);
+  }
+
+  @Test
+  public void testSingleRetryInterval() throws ParseException {
+    // given
+    BpmnModelInstance bpmnModelInstance = prepareProcessFailingServiceTaskWithRetryCycle("PT8M ");
+    testRule.deploy(bpmnModelInstance);
+
+    ClockUtil.setCurrentTime(SIMPLE_DATE_FORMAT.parse("2017-01-01T09:55:00"));
+
+    ProcessInstance pi = runtimeService.startProcessInstanceByKey(PROCESS_ID);
+    assertNotNull(pi);
+
+    Date currentTime = SIMPLE_DATE_FORMAT.parse("2017-01-01T10:00:00");
+    ClockUtil.setCurrentTime(currentTime);
+
+    String processInstanceId = pi.getProcessInstanceId();
+
+    int jobRetries = executeJob(processInstanceId);
+    assertEquals(1, jobRetries);
+    currentTime = DateUtils.addMinutes(currentTime, 8);
+    assertLockExpirationTime(currentTime);
+    ClockUtil.setCurrentTime(currentTime);
+
+    jobRetries = executeJob(processInstanceId);
+    assertEquals(0, jobRetries);
   }
 
   @Test
@@ -262,10 +329,6 @@ public class RetryIntervalsConfigurationTest extends AbstractAsyncOperationsTest
 
     jobRetries = executeJob(processInstanceId);
     assertEquals(0, jobRetries);
-    currentTime = DateUtils.addMinutes(currentTime, 8);
-    assertLockExpirationTime(currentTime);
-    ClockUtil.setCurrentTime(currentTime);
-
   }
 
   @Test
@@ -345,6 +408,7 @@ public class RetryIntervalsConfigurationTest extends AbstractAsyncOperationsTest
         .serviceTask()
           .camundaClass(FAILING_CLASS)
           .camundaAsyncBefore()
+          .camundaExecutionListenerClass(RecorderExecutionListener.EVENTNAME_START, RecorderExecutionListener.class.getName())
         .endEvent()
         .done();
     return modelInstance;

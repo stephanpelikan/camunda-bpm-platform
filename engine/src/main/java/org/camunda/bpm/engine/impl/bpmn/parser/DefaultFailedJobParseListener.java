@@ -150,45 +150,30 @@ public class DefaultFailedJobParseListener extends AbstractBpmnParseListener {
   }
 
   protected void setFailedJobRetryTimeCycleValue(Element element, ActivityImpl activity) {
+    String failedJobRetryTimeCycleConfiguration = null;
+
     Element extensionElements = element.element(EXTENSION_ELEMENTS);
-    FailedJobRetryConfiguration retryConf = null;
     if (extensionElements != null) {
       Element failedJobRetryTimeCycleElement = extensionElements.elementNS(FOX_ENGINE_NS, FAILED_JOB_RETRY_TIME_CYCLE);
       if (failedJobRetryTimeCycleElement == null) {
         // try to get it from the activiti namespace
         failedJobRetryTimeCycleElement = extensionElements.elementNS(BpmnParse.CAMUNDA_BPMN_EXTENSIONS_NS, FAILED_JOB_RETRY_TIME_CYCLE);
       }
+
       if (failedJobRetryTimeCycleElement != null) {
-        String failedJobRetryTimeCycleValue = failedJobRetryTimeCycleElement.getText();
-        retryConf = ParseUtil.parseRetryIntervals(failedJobRetryTimeCycleValue);
-//        ArrayList<String> parsedIntervalsList = ParseUtil.parseRetryIntervals(failedJobRetryTimeCycleValue);
-//        retryConf = processRetryConf(parsedIntervalsList, failedJobRetryTimeCycleValue);
+        failedJobRetryTimeCycleConfiguration = failedJobRetryTimeCycleElement.getText();
       }
     }
-    else {
-      String failedJobRetryTimeCycle = Context.getProcessEngineConfiguration().getFailedJobRetryTimeCycle();
-      if (failedJobRetryTimeCycle != null) {
-        retryConf = ParseUtil.parseRetryIntervals(failedJobRetryTimeCycle);
-      }
-//      List<String> parsedIntervalsList = Context.getProcessEngineConfiguration().getParsedRetryIntervals();
-//      retryConf = processRetryConf(parsedIntervalsList, failedJobRetryTimeCycle);
+
+    if (failedJobRetryTimeCycleConfiguration == null || failedJobRetryTimeCycleConfiguration.isEmpty()) {
+      failedJobRetryTimeCycleConfiguration = Context.getProcessEngineConfiguration().getFailedJobRetryTimeCycle();
     }
-    if (retryConf != null) {
-      activity.getProperties().set(FAILED_JOB_CONFIGURATION, retryConf);
+
+    if (failedJobRetryTimeCycleConfiguration != null) {
+      FailedJobRetryConfiguration configuration = ParseUtil.parseRetryIntervals(failedJobRetryTimeCycleConfiguration);
+      activity.getProperties().set(FAILED_JOB_CONFIGURATION, configuration);
     }
   }
-
-//  private FailedJobRetryConfiguration processRetryConf(List<String> parsedIntervalsList, String failedJobRetryTimeCycle) {
-//    FailedJobRetryConfiguration retryConf = null;
-//    if (parsedIntervalsList != null && parsedIntervalsList.size() > 1) {
-//      retryConf = new FailedJobRetryConfiguration(parsedIntervalsList);
-//    } else if (failedJobRetryTimeCycle != null) {
-//      ExpressionManager expressionManager = Context.getProcessEngineConfiguration().getExpressionManager();
-//      Expression expression = expressionManager.createExpression(failedJobRetryTimeCycle);
-//      retryConf = new FailedJobRetryConfiguration(expression);
-//    }
-//    return retryConf;
-//  }
 
   protected boolean isMultiInstance(ActivityImpl activity) {
     // #isMultiInstance() don't work since the property is not set yet
