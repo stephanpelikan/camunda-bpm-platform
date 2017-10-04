@@ -108,19 +108,19 @@ public class RetryIntervalsConfigurationTest extends AbstractAsyncOperationsTest
     String processInstanceId = pi.getProcessInstanceId();
 
     int jobRetries = executeJob(processInstanceId);
-    assertEquals(2, jobRetries);
+    assertEquals(3, jobRetries);
     currentTime = DateUtils.addMinutes(currentTime, 5);
     assertLockExpirationTime(currentTime);
     ClockUtil.setCurrentTime(currentTime);
 
     jobRetries = executeJob(processInstanceId);
-    assertEquals(1, jobRetries);
+    assertEquals(2, jobRetries);
     currentTime = DateUtils.addMinutes(currentTime, 20);
     assertLockExpirationTime(currentTime);
     ClockUtil.setCurrentTime(currentTime);
 
     jobRetries = executeJob(processInstanceId);
-    assertEquals(0, jobRetries);
+    assertEquals(1, jobRetries);
     currentTime = DateUtils.addMinutes(currentTime, 3);
     assertLockExpirationTime(currentTime);
     ClockUtil.setCurrentTime(currentTime);

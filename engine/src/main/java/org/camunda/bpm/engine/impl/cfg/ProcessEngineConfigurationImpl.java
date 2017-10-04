@@ -889,12 +889,12 @@ public abstract class ProcessEngineConfigurationImpl extends ProcessEngineConfig
     }
     postParseListeners.add(new DefaultFailedJobParseListener());
 
-    if (failedJobRetryTimeCycle != null) {
-      ArrayList<String> parsedIntervalsList = ParseUtil.parseRetryIntervals(failedJobRetryTimeCycle);
-      if (parsedIntervalsList.size() > 1) {
-        parsedRetryIntervals = parsedIntervalsList;
-      }
-    }
+//    if (failedJobRetryTimeCycle != null) {
+//      ArrayList<String> parsedIntervalsList = ParseUtil.parseRetryIntervals(failedJobRetryTimeCycle);
+//      if (parsedIntervalsList.size() > 1) {
+//        parsedRetryIntervals = parsedIntervalsList;
+//      }
+//    }
   }
 
   // incident handlers /////////////////////////////////////////////////////////////
