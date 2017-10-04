@@ -33,6 +33,7 @@ import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.JobEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.camunda.bpm.engine.impl.pvm.process.ActivityImpl;
+import org.camunda.bpm.engine.impl.util.ParseUtil;
 
 /**
  * @author Roman Smirnov
@@ -105,6 +106,11 @@ public class DefaultJobRetryCmd extends JobRetryCmd {
 
     FailedJobRetryConfiguration retryConfiguration = activity.getProperties().get(DefaultFailedJobParseListener.FAILED_JOB_CONFIGURATION);
 
+    if (retryConfiguration != null && retryConfiguration.getExpression()!=null) {
+      String retryIntervals = getFailedJobRetryTimeCycle(job, retryConfiguration.getExpression());
+      retryConfiguration = ParseUtil.parseRetryIntervals(retryIntervals);
+    }
+
     if (retryConfiguration == null) {
       executeStandardStrategy(commandContext);
 
@@ -121,7 +127,7 @@ public class DefaultJobRetryCmd extends JobRetryCmd {
       List<String> intervals = retryConfiguration.getRetryIntervals();
       int size = intervals.size();
 
-      int idx = Math.max(0, Math.min(size -  1, size - (job.getRetries() - 1)));
+      int idx = Math.max(0, Math.min(size - 1, size - (job.getRetries() - 1)));
 
       DurationHelper durationHelper = getDurationHelper(intervals.get(idx));
       job.setLockExpirationTime(durationHelper.getDateAfter());

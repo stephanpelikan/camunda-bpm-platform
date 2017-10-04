@@ -40,4 +40,7 @@ public class FailedJobRetryConfiguration {
     return retryIntervals;
   }
 
+  public Expression getExpression() {
+    return expression;
+  }
 }

@@ -167,7 +167,9 @@ public class DefaultFailedJobParseListener extends AbstractBpmnParseListener {
     }
     else {
       String failedJobRetryTimeCycle = Context.getProcessEngineConfiguration().getFailedJobRetryTimeCycle();
-      retryConf = ParseUtil.parseRetryIntervals(failedJobRetryTimeCycle);
+      if (failedJobRetryTimeCycle != null) {
+        retryConf = ParseUtil.parseRetryIntervals(failedJobRetryTimeCycle);
+      }
 //      List<String> parsedIntervalsList = Context.getProcessEngineConfiguration().getParsedRetryIntervals();
 //      retryConf = processRetryConf(parsedIntervalsList, failedJobRetryTimeCycle);
     }
