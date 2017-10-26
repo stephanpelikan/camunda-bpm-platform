@@ -71,16 +71,24 @@ public class DbSqlSession extends AbstractPersistenceSession {
     this.dbSqlSessionFactory = dbSqlSessionFactory;
     this.sqlSession = dbSqlSessionFactory
       .getSqlSessionFactory()
-      .openSession(ExecutorType.BATCH);
+      .openSession(getExecutorType());
   }
 
   public DbSqlSession(DbSqlSessionFactory dbSqlSessionFactory, Connection connection, String catalog, String schema) {
     this.dbSqlSessionFactory = dbSqlSessionFactory;
     this.sqlSession = dbSqlSessionFactory
       .getSqlSessionFactory()
-      .openSession(ExecutorType.BATCH, connection);
+      .openSession(getExecutorType(), connection);
     this.connectionMetadataDefaultCatalog = catalog;
     this.connectionMetadataDefaultSchema = schema;
+  }
+
+  protected ExecutorType getExecutorType() {
+    if (Context.getProcessEngineConfiguration().isJdbcBatchProcessing()) {
+      return ExecutorType.BATCH;
+    } else {
+      return ExecutorType.SIMPLE;
+    }
   }
 
   @Override
@@ -221,8 +229,25 @@ public class DbSqlSession extends AbstractPersistenceSession {
 
     LOG.executeDatabaseOperation("UPDATE", dbEntity);
 
-    // execute update
-    executeUpdate(updateStatement, dbEntity);
+    if (Context.getProcessEngineConfiguration().isJdbcBatchProcessing()) {
+      // execute update
+      executeUpdate(updateStatement, dbEntity);
+    } else {
+      // execute update
+      int numOfRowsUpdated = executeUpdate(updateStatement, dbEntity);
+
+      if (dbEntity instanceof HasDbRevision) {
+        if (numOfRowsUpdated != 1) {
+          // failed with optimistic locking
+          operation.setFailed(true);
+          return;
+        } else {
+          // increment revision of our copy
+          HasDbRevision versionedObject = (HasDbRevision) dbEntity;
+          versionedObject.setRevision(versionedObject.getRevisionNext());
+        }
+      }
+    }
 
     // perform post update action
     entityUpdated(dbEntity);

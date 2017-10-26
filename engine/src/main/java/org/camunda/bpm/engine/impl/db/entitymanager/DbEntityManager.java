@@ -289,6 +289,7 @@ public class DbEntityManager implements Session, EntityLoadListener {
   }
 
   protected void flushDbOperationManager() {
+
     // obtain totally ordered operation list from operation manager
     List<DbOperation> operationsToFlush = dbOperationManager.calculateFlush();
     if (operationsToFlush == null || operationsToFlush.size() == 0) {
@@ -315,49 +316,54 @@ public class DbEntityManager implements Session, EntityLoadListener {
         }
       }
 
-      List<BatchResult> flushResult;
-      try {
-        flushResult = persistenceSession.flushOperations();
-      } catch (Exception e) {
-        throw LOG.flushDbOperationsException(operationsToFlush, e);
-      }
-
-      int flushResultSize = 0;
-
-      if (flushResult != null && flushResult.size() > 0) {
-        LOG.printBatchResults(flushResult);
-        //process the batch results to handle Optimistic Lock Exceptions
-        Iterator<DbOperation> operationIt = operationsToFlush.iterator();
-        for (BatchResult batchResult : flushResult) {
-          for (int statementResult : batchResult.getUpdateCounts()) {
-            flushResultSize ++;
-            DbOperation thisOperation = operationIt.next();
-            if (thisOperation instanceof DbEntityOperation && ((DbEntityOperation) thisOperation).getEntity() instanceof HasDbRevision) {
-              final DbEntity dbEntity = ((DbEntityOperation) thisOperation).getEntity();
-              if (statementResult != 1) {
-                ((DbEntityOperation) thisOperation).setFailed(true);
-                handleOptimisticLockingException(thisOperation);
-              } else {
-                //update revision number in cache
-                if (thisOperation.getOperationType().equals(DbOperationType.UPDATE)) {
-                  HasDbRevision versionedObject = (HasDbRevision) dbEntity;
-                  versionedObject.setRevision(versionedObject.getRevisionNext());
-                }
-              }
-            }
-          }
+      if (Context.getProcessEngineConfiguration().isJdbcBatchProcessing()) {
+        List<BatchResult> flushResult;
+        try {
+          flushResult = persistenceSession.flushOperations();
+        } catch (Exception e) {
+          throw LOG.flushDbOperationsException(operationsToFlush, e);
         }
-        //this must not happen, but worth checking
-        if (operationsToFlush.size() != flushResultSize) {
-          LOG.wrongBatchResultsSizeException(operationsToFlush);
-        }
+        checkFlushResults(operationsToFlush, flushResult);
       }
-
     } finally {
       if (isIgnoreForeignKeysForNextFlush) {
         persistenceSession.executeNonEmptyUpdateStmt(TOGGLE_FOREIGN_KEY_STMT, true);
         persistenceSession.flushOperations();
         isIgnoreForeignKeysForNextFlush = false;
+      }
+    }
+  }
+
+  protected void checkFlushResults(List<DbOperation> operationsToFlush, List<BatchResult> flushResult) {
+    int flushResultSize = 0;
+
+    if (flushResult != null && flushResult.size() > 0) {
+      LOG.printBatchResults(flushResult);
+      //process the batch results to handle Optimistic Lock Exceptions
+      Iterator<DbOperation> operationIt = operationsToFlush.iterator();
+      for (BatchResult batchResult : flushResult) {
+        for (int statementResult : batchResult.getUpdateCounts()) {
+          flushResultSize++;
+          DbOperation thisOperation = operationIt.next();
+          if (thisOperation instanceof DbEntityOperation && ((DbEntityOperation) thisOperation).getEntity() instanceof HasDbRevision
+            && !thisOperation.getOperationType().equals(DbOperationType.INSERT)) {
+            final DbEntity dbEntity = ((DbEntityOperation) thisOperation).getEntity();
+            if (statementResult != 1) {
+              ((DbEntityOperation) thisOperation).setFailed(true);
+              handleOptimisticLockingException(thisOperation);
+            } else {
+              //update revision number in cache
+              if (thisOperation.getOperationType().equals(DbOperationType.UPDATE)) {
+                HasDbRevision versionedObject = (HasDbRevision) dbEntity;
+                versionedObject.setRevision(versionedObject.getRevisionNext());
+              }
+            }
+          }
+        }
+      }
+      //this must not happen, but worth checking
+      if (operationsToFlush.size() != flushResultSize) {
+        LOG.wrongBatchResultsSizeException(operationsToFlush);
       }
     }
   }

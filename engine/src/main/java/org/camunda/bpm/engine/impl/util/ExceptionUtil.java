@@ -85,10 +85,10 @@ public class ExceptionUtil {
     return false;
   }
 
-  public static List<SQLException> findRelatedSqlExceptions(ProcessEngineException exception) {
+  public static List<SQLException> findRelatedSqlExceptions(Throwable exception) {
     List<SQLException> sqlExceptionList = new ArrayList<SQLException>();
-    Throwable cause = exception.getCause();
-    while (cause != null) {
+    Throwable cause = exception;
+    do {
       if (cause instanceof SQLException) {
         SQLException sqlEx = (SQLException) cause;
         sqlExceptionList.add(sqlEx);
@@ -98,7 +98,7 @@ public class ExceptionUtil {
         }
       }
       cause = cause.getCause();
-    }
+    } while (cause != null);
     return sqlExceptionList;
   }
 

@@ -215,6 +215,7 @@
     <history.level>full</history.level>
     <mail.server.port>5025</mail.server.port>
     <authorizationCheckRevokes>auto</authorizationCheckRevokes>
+    <jdbcBatchProcessing>false</jdbcBatchProcessing>
 
     <camunda.artifact>
       org.camunda.bpm
@@ -437,6 +438,25 @@
       <properties>
         <authorizationCheckRevokes>always</authorizationCheckRevokes>
       </properties>
+    </profile>
+
+    <profile>
+      <id>jdbcBatchProcessing</id>
+      <properties>
+        <jdbcBatchProcessing>true</jdbcBatchProcessing>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <excludes combine.children="append">
+                <exclude>**/JdbcStatementTimeoutTest.java</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
 
     <profile>
