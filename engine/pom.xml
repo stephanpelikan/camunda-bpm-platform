@@ -215,7 +215,7 @@
     <history.level>full</history.level>
     <mail.server.port>5025</mail.server.port>
     <authorizationCheckRevokes>auto</authorizationCheckRevokes>
-    <jdbcBatchProcessing>false</jdbcBatchProcessing>
+    <jdbcBatchProcessing>true</jdbcBatchProcessing>
 
     <camunda.artifact>
       org.camunda.bpm
@@ -441,22 +441,10 @@
     </profile>
 
     <profile>
-      <id>jdbcBatchProcessing</id>
+      <id>jdbc-simple-processing</id>
       <properties>
-        <jdbcBatchProcessing>true</jdbcBatchProcessing>
+        <jdbcBatchProcessing>false</jdbcBatchProcessing>
       </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <excludes combine.children="append">
-                <exclude>**/JdbcStatementTimeoutTest.java</exclude>
-              </excludes>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
 
     <profile>
@@ -496,6 +484,38 @@
                 <exclude>**/CompetingMessageCorrelationTest.java</exclude>
                 <exclude>**/ConcurrentDeploymentTest.java</exclude>
                 <exclude>**/*TestCase.java</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>mariadb</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <excludes combine.children="append">
+                <exclude>**/JdbcStatementTimeoutTest.java</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>db2</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <excludes combine.children="append">
+                <exclude>**/JdbcStatementTimeoutTest.java</exclude>
               </excludes>
             </configuration>
           </plugin>
