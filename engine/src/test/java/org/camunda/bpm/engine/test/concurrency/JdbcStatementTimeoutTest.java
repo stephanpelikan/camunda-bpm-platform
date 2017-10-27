@@ -94,10 +94,10 @@ public class JdbcStatementTimeoutTest extends ConcurrencyTestCase {
 
   @Override
   protected void tearDown() throws Exception {
-
-    thread1.waitUntilDone();
-
-    deleteJobEntities();
+    if (thread1 != null) {
+      thread1.waitUntilDone();
+      deleteJobEntities();
+    }
   }
 
   private void createJobEntity() {
