@@ -441,7 +441,7 @@
     </profile>
 
     <profile>
-      <id>jdbc-simple-processing</id>
+      <id>cfgJdbcBatchProcessingOff</id>
       <properties>
         <jdbcBatchProcessing>false</jdbcBatchProcessing>
       </properties>

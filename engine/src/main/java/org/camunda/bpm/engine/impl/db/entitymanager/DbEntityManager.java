@@ -314,6 +314,9 @@ public class DbEntityManager implements Session, EntityLoadListener {
         } catch (Exception e) {
           throw LOG.flushDbOperationException(operationsToFlush, dbOperation, e);
         }
+        if (dbOperation.isFailed()) {
+          handleOptimisticLockingException(dbOperation);
+        }
       }
 
       if (Context.getProcessEngineConfiguration().isJdbcBatchProcessing()) {
