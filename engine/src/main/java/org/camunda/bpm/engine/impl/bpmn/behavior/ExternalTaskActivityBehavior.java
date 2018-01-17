@@ -23,6 +23,8 @@ import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ExternalTaskEntity;
 import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.camunda.bpm.engine.impl.pvm.delegate.MigrationObserverBehavior;
+import org.camunda.bpm.engine.impl.el.ExpressionManager;
+import org.camunda.bpm.engine.impl.el.Expression;
 
 /**
  * Implements behavior of external task activities, i.e. all service-task-like
@@ -46,6 +48,13 @@ public class ExternalTaskActivityBehavior extends AbstractBpmnActivityBehavior i
     ExecutionEntity executionEntity = (ExecutionEntity) execution;
     PriorityProvider<ExternalTaskActivityBehavior> provider = Context.getProcessEngineConfiguration().getExternalTaskPriorityProvider();
     long priority = provider.determinePriority(executionEntity, this, null);
+    ExpressionManager expressionManager = Context.getProcessEngineConfiguration().getExpressionManager();
+    Expression expression = expressionManager.createExpression(topicName);
+    Object value = expression.getValue(execution);
+    String newTopicName;
+    if ((value != null) && !(newTopicName = value.toString().trim()).isEmpty()) {
+      topicName = newTopicName;
+    }
     ExternalTaskEntity.createAndInsert(executionEntity, topicName, priority);
 
   }
