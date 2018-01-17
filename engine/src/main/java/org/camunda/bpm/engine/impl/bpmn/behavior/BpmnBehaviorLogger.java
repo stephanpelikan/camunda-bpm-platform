@@ -267,4 +267,10 @@ public class BpmnBehaviorLogger extends ProcessEngineLogger {
         errorCode));
   }
 
+  public ProcessEngineException unresolvableTopicnameExpressionException(String expression) {
+    return new ProcessEngineException(
+      exceptionMessage("043", "Expression '{}' didn't resolve to a valid topicname", expression)
+    );
+  }
+
 }

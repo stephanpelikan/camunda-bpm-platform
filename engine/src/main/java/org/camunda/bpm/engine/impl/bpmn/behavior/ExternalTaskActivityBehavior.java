@@ -23,6 +23,9 @@ import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ExternalTaskEntity;
 import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.camunda.bpm.engine.impl.pvm.delegate.MigrationObserverBehavior;
+import org.camunda.bpm.engine.impl.el.ExpressionManager;
+import org.camunda.bpm.engine.impl.el.Expression;
+import org.camunda.bpm.engine.impl.ProcessEngineLogger;
 
 /**
  * Implements behavior of external task activities, i.e. all service-task-like
@@ -33,11 +36,15 @@ import org.camunda.bpm.engine.impl.pvm.delegate.MigrationObserverBehavior;
  */
 public class ExternalTaskActivityBehavior extends AbstractBpmnActivityBehavior implements MigrationObserverBehavior {
 
+  protected static final BpmnBehaviorLogger LOG = ProcessEngineLogger.BPMN_BEHAVIOR_LOGGER;
+
   protected String topicName;
+  protected boolean topicNameContainsExpression;
   protected ParameterValueProvider priorityValueProvider;
 
   public ExternalTaskActivityBehavior(String topicName, ParameterValueProvider paramValueProvider) {
     this.topicName = topicName;
+    this.topicNameContainsExpression = topicName.indexOf('$') != -1;
     this.priorityValueProvider = paramValueProvider;
   }
 
@@ -46,6 +53,16 @@ public class ExternalTaskActivityBehavior extends AbstractBpmnActivityBehavior i
     ExecutionEntity executionEntity = (ExecutionEntity) execution;
     PriorityProvider<ExternalTaskActivityBehavior> provider = Context.getProcessEngineConfiguration().getExternalTaskPriorityProvider();
     long priority = provider.determinePriority(executionEntity, this, null);
+    if (topicNameContainsExpression) {
+      ExpressionManager expressionManager = Context.getProcessEngineConfiguration().getExpressionManager();
+      Expression expression = expressionManager.createExpression(topicName);
+      Object value = expression.getValue(execution);
+      String newTopicName;
+      if ((value == null) || (newTopicName = value.toString().trim()).isEmpty()) {
+        throw LOG.unresolvableTopicnameExpressionException(topicName);
+      }
+      topicName = newTopicName;
+    }
     ExternalTaskEntity.createAndInsert(executionEntity, topicName, priority);
 
   }
