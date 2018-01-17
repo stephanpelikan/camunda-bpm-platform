@@ -35,11 +35,13 @@ import org.camunda.bpm.engine.impl.el.Expression;
  */
 public class ExternalTaskActivityBehavior extends AbstractBpmnActivityBehavior implements MigrationObserverBehavior {
 
+  protected boolean topicNameContainsExpression;
   protected String topicName;
   protected ParameterValueProvider priorityValueProvider;
 
   public ExternalTaskActivityBehavior(String topicName, ParameterValueProvider paramValueProvider) {
     this.topicName = topicName;
+    this.topicNameContainsExpression = topicName.indexOf('$') != -1;
     this.priorityValueProvider = paramValueProvider;
   }
 
@@ -48,15 +50,16 @@ public class ExternalTaskActivityBehavior extends AbstractBpmnActivityBehavior i
     ExecutionEntity executionEntity = (ExecutionEntity) execution;
     PriorityProvider<ExternalTaskActivityBehavior> provider = Context.getProcessEngineConfiguration().getExternalTaskPriorityProvider();
     long priority = provider.determinePriority(executionEntity, this, null);
-    ExpressionManager expressionManager = Context.getProcessEngineConfiguration().getExpressionManager();
-    Expression expression = expressionManager.createExpression(topicName);
-    Object value = expression.getValue(execution);
-    String newTopicName;
-    if ((value != null) && !(newTopicName = value.toString().trim()).isEmpty()) {
-      topicName = newTopicName;
+    if (topicNameContainsExpression) {
+      ExpressionManager expressionManager = Context.getProcessEngineConfiguration().getExpressionManager();
+      Expression expression = expressionManager.createExpression(topicName);
+      Object value = expression.getValue(execution);
+      String newTopicName;
+      if ((value != null) && !(newTopicName = value.toString().trim()).isEmpty()) {
+        topicName = newTopicName;
+      }
     }
     ExternalTaskEntity.createAndInsert(executionEntity, topicName, priority);
-
   }
 
   @Override
